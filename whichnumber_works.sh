@@ -1,5 +1,5 @@
 #!/bin/bash 
-#This is just a simple read script. Nothing to exciting
+#This is just a simple if loop script.
 ANSWER=$(( RANDOM % 10 ))
 echo guess a number 1 through 10
 read NUMBER
