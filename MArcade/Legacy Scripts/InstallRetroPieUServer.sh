@@ -1,7 +1,9 @@
 #!/bin/bash
 #Install RetroPie on Ubuntu Server
-
 user=whoami
+
+#Check for Updates
+sudo apt update && sudo apt dist-upgrade
 
 #Add 'arcade' user to sudoers (password required first time)
 #sudo sed -i -e '$a\arcade ALL=(ALL) NOPASSWD:ALL' /etc/sudoers
