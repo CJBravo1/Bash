@@ -6,7 +6,7 @@ user=whoami
 sudo apt update && sudo apt dist-upgrade -y
 
 #Install Prerequisite Software
-sudo apt install git dialog unzip xmlstarlet vim net-tools -y
+sudo apt install git dialog unzip xmlstarlet vim net-tools wireless-tools -y
 
 #Install Ubuntu Drivers
 sudo apt install ubuntu-drivers-common -y
