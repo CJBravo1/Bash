@@ -16,6 +16,9 @@ sudo ubuntu-drivers autoinstall
 #Lightdm login file located in /etc/lightdm/lightdm.conf
 sudo apt install lightdm openbox xinit -y
 
+#Stop Network Start Job Search
+sudo systemctl mask systemd-networkd-wait-online.service
+
 #Add lightdm configuration to lightdm.conf
 read -p "MAKE SURE YOUR USER ACCOUNT IS SET PROPERLY IN THE LIGHTDM.CONF FLIE!!!"
 sudo cp /etc/lightdm/lightdm.conf /etc/lightdm/lightdm.conf.bak
