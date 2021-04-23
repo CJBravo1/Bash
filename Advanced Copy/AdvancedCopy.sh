@@ -15,9 +15,9 @@ patch -p1 -i advcpmv-0.8-8.32.patch
 make
 
 #Copy New cp and mv commands
-sudo cp src/cp /usr/local/bin/cp
-sudo cp src/mv /usr/local/bin/mv
+sudo mv src/cp /usr/local/bin/cp
+sudo mv src/mv /usr/local/bin/mv
 
 #Add Alias
-echo 'alias cp='/usr/local/bin/cp -gR'' > ~/.bashrc
-echo 'alias mv='/usr/local/bin/mv -g'' > ~/.bashrc
+echo 'alias cp='/usr/local/bin/cp -gR'' >> ~/.bashrc
+echo 'alias mv='/usr/local/bin/mv -g'' >> ~/.bashrc
