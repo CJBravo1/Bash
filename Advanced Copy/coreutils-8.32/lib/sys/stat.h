@@ -1136,7 +1136,7 @@ _GL_WARN_ON_USE (mkfifoat, "mkfifoat is not portable - "
 
 
 #if 1
-# if 0
+# if 1
 #  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #   undef mknod
 #   define mknod rpl_mknod

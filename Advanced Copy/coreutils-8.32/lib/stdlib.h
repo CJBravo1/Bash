@@ -934,7 +934,7 @@ _GL_WARN_ON_USE (mkostemps, "mkostemps is unportable - "
    implementation.
    Returns the open file descriptor if successful, otherwise -1 and errno
    set.  */
-# if 0
+# if 1
 #  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #   define mkstemp rpl_mkstemp
 #  endif

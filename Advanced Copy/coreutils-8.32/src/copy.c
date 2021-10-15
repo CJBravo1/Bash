@@ -405,7 +405,7 @@ sparse_copy (int src_fd, int dest_fd, char *buf, size_t buf_size,
             {
               printf ( "\033[K%s\n", s_progress->cProgressField[it] );
               if ( strlen ( s_progress->cProgressField[it] ) < s_progress->iBarLength )
-                printf ( "" );
+                printf ( "%s", "" );
             }
             if ( g_iTotalFiles > 1 )
               printf ( "\r\033[6A" );
@@ -1954,15 +1954,15 @@ overwrite_ok (struct cp_options const *x, char const *dst_name,
       fprintf (stderr,
                (x->move_mode || x->unlink_dest_before_opening
                 || x->unlink_dest_after_failed_open)
-               ? _("%s: replace %s, overriding mode %04lo (%s)? ")
-               : _("%s: unwritable %s (mode %04lo, %s); try anyway? "),
+               ? _("\n\n%s: replace %s, overriding mode %04lo (%s)? ")
+               : _("\n\n%s: unwritable %s (mode %04lo, %s); try anyway? "),
                program_name, quoteaf (dst_name),
                (unsigned long int) (dst_sb->st_mode & CHMOD_MODE_BITS),
                &perms[1]);
     }
   else
     {
-      fprintf (stderr, _("%s: overwrite %s? "),
+      fprintf (stderr, _("\n\n%s: overwrite %s? "),
                program_name, quoteaf (dst_name));
     }
 
