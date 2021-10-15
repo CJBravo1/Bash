@@ -114,7 +114,7 @@
 /* #undef FCHOWNAT_NOFOLLOW_BUG */
 
 /* Define this to 1 if F_DUPFD behavior does not match POSIX */
-#define FCNTL_DUPFD_BUGGY 1
+/* #undef FCNTL_DUPFD_BUGGY */
 
 /* Define to nothing if C supports flexible array members, and to 1 if it does
    not. That way, with a declaration like 'struct s { int n; short
@@ -2876,7 +2876,7 @@
 /* #undef MKFIFO_TRAILING_SLASH_BUG */
 
 /* Define to 1 if mknod cannot create a fifo without super-user privileges */
-/* #undef MKNOD_FIFO_BUG */
+#define MKNOD_FIFO_BUG 1
 
 /* Define if (like SVR2) there is no specific function for reading the list of
    mounted file systems, and your system has these header files: <sys/fstyp.h>
@@ -3087,7 +3087,7 @@
 
 /* Define if rename does not correctly handle slashes on the destination
    argument, such as on Solaris 11 or NetBSD 1.6. */
-#define RENAME_TRAILING_SLASH_DEST_BUG 1
+/* #undef RENAME_TRAILING_SLASH_DEST_BUG */
 
 /* Define if rename does not correctly handle slashes on the source argument,
    such as on Solaris 9 or cygwin 1.5. */

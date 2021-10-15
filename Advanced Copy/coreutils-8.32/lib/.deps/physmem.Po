@@ -26,8 +26,8 @@ lib/physmem.o: lib/physmem.c /usr/include/stdc-predef.h lib/config.h \
  /usr/include/linux/stddef.h \
  /usr/include/x86_64-linux-gnu/asm/posix_types.h \
  /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
- /usr/include/asm-generic/posix_types.h lib/sys/types.h \
- /usr/include/x86_64-linux-gnu/sys/types.h \
+ /usr/include/asm-generic/posix_types.h /usr/include/linux/const.h \
+ lib/sys/types.h /usr/include/x86_64-linux-gnu/sys/types.h \
  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
@@ -157,6 +157,8 @@ lib/unistd.h:
 /usr/include/x86_64-linux-gnu/asm/posix_types_64.h:
 
 /usr/include/asm-generic/posix_types.h:
+
+/usr/include/linux/const.h:
 
 lib/sys/types.h:
 
