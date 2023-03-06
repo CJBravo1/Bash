@@ -16,6 +16,8 @@ packages=(
     "code"
     "fortune"
     "lolcat"
+    "neofetch"
+    "nfs-common"
     "rclone"
     "software-properties-common"
     "steam"
@@ -33,6 +35,7 @@ sudo fc-cache -f -v
 # List of Flatpak applications to install
 flatpaks=(
     "com.spotify.Client"
+    "com.github.tchx84.Flatseal"
     )
 # Install flatpak applications
 flatpak install ${flatpaks[*]}
@@ -44,6 +47,7 @@ extensions=(
     "user-theme@gnome-shell-extensions.gcampax.github.com"
     "cosmic-dock@system76.com"
     "cosmic-workspaces@system76.com"
+    "clipboard-indicator@tudmotu.com"
     "ding@rastersoft.com"
     "pop-cosmic@system76.com"
     "pop-shell@system76.com"
@@ -73,3 +77,10 @@ sudo dpkg -i packages-microsoft-prod.deb
 sudo apt update
 #Install PowerShell
 sudo apt install -y powershell
+
+cd ~/Downloads && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf -
+~/Downloads/.dropbox-dist/dropboxd
+
+
+#Generate ssh key
+ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
