@@ -22,6 +22,8 @@ packages=(
     "software-properties-common"
     "steam"
     "toilet"
+    "gir1.2-gda-5.0"
+    "gir1.2-gsound-1.0"
     )
 #Install Software | Refresh font cache
 sudo apt install -y $packages
@@ -38,9 +40,9 @@ flatpaks=(
     "com.github.tchx84.Flatseal"
     )
 # Install flatpak applications
-flatpak install ${flatpaks[*]}
+flatpak install -y ${flatpaks[*]}
 
-#Install Gnome Extensions
+#Install Gnome Extensions #####WORK IN PROGRESS!!!!####
 #List of GNOME extensions to install
 extensions=(
     "add-username-toppanel@brendaw.com"
@@ -49,6 +51,7 @@ extensions=(
     "cosmic-workspaces@system76.com"
     "clipboard-indicator@tudmotu.com"
     "ding@rastersoft.com"
+    "pano@elhan.io"
     "pop-cosmic@system76.com"
     "pop-shell@system76.com"
     "popx11gestures@system76.com"
@@ -65,7 +68,7 @@ done
 
 #Install Google Chrome
 wget -P ~/Downloads https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-sudo apt install ~/Downloads/google-chrome-stable_current_amd64.deb
+sudo apt install -y ~/Downloads/google-chrome-stable_current_amd64.deb
 rm -v ~/Downloads/google-chrome-stable_current_amd64.deb
 
 #Install Powershell
