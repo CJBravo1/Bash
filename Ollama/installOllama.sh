@@ -25,6 +25,11 @@ fi
 echo "Installing Ollama"
 curl -fsSL https://ollama.com/install.sh | sh
 
+#Install Ollama Modules
+echo "Installing Ollama Modules"
+ollama pull llama3
+ollama pull codellama
+
 #Install Docker
 # Add Docker's official GPG key:
 sudo apt update
