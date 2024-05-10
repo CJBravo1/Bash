@@ -8,13 +8,13 @@ sudo apt upgrade -y
 # Check if running on Raspberry Pi
 if [[ $(uname -m) == "arm"* ]]; then
     echo "Running on Raspberry Pi"
-    DOCKERURL='https://download.docker.com/linux/debian/gpg'
+    DOCKERURL='https://download.docker.com/linux/debian'
     # Raspberry Pi specific commands or actions
 else
     # Check if running on Ubuntu
     if [[ $(lsb_release -si) == "Ubuntu" ]]; then
         echo "Running on Ubuntu"
-        DOCKERURL='https://download.docker.com/linux/ubuntu/gpg'
+        DOCKERURL='https://download.docker.com/linux/ubuntu'
     else
         echo "Unknown operating system"
         # Handle other operating systems if needed
