@@ -24,10 +24,10 @@ fi
 #Install Ollama
 echo "Installing Ollama"
 curl -fsSL https://ollama.com/install.sh | sh
+sleep 15
 
 #Install Ollama Modules
 echo "Installing Ollama Modules"
-sleep 15
 ollama pull llama3
 ollama pull codellama
 
