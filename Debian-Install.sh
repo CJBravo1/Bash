@@ -12,3 +12,6 @@ sudo apt install toilet fortune lolcat vim nano htop cockpit -y
 echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
 echo 'uptime -p | lolcat' >> ~/.bashrc
 echo 'fortune -s | lolcat' >> ~/.bashrc
+
+#Create SSH Keys
+ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
