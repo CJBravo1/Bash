@@ -8,15 +8,13 @@ sudo apt upgrade -y
 # Check if running on Raspberry Pi
 if [[ $(uname -m) == "arm"* ]]; then
     echo "Running on Raspberry Pi"
-    DOCKERURLGPG='https://download.docker.com/linux/debian/gpg'
-    DOCKERURL='https://download.docker.com/linux/debian'
+    DOCKERURL='https://download.docker.com/linux/debian/gpg'
     # Raspberry Pi specific commands or actions
 else
     # Check if running on Ubuntu
     if [[ $(lsb_release -si) == "Ubuntu" ]]; then
         echo "Running on Ubuntu"
-        DOCKERURLGPG='https://download.docker.com/linux/ubuntu/gpg'
-        DOCKERURL='https://download.docker.com/linux/ubuntu'
+        DOCKERURL='https://download.docker.com/linux/ubuntu/gpg'
     else
         echo "Unknown operating system"
         # Handle other operating systems if needed
@@ -33,7 +31,7 @@ sudo apt update
 for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
 sudo apt install ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL "$DOCKERURLGPG" -o /etc/apt/keyrings/docker.asc
+sudo curl -fsSL "$DOCKERURL/gpg" -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 
 # Add the repository to Apt sources:
