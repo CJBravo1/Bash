@@ -3,6 +3,7 @@
 
 #Update Apt
 sudo apt update
+sudo apt upgrade -y
 
 # Check if running on Raspberry Pi
 if [[ $(uname -m) == "arm"* ]]; then
