@@ -4,6 +4,22 @@
 if ! command -v docker &> /dev/null; then
     echo "Docker is not installed. Installing Docker..."
     
+    # Check if running on Raspberry Pi
+if [[ $(uname -m) == "arm"* ]]; then
+    echo "Running on Raspberry Pi"
+    DOCKERURL='https://download.docker.com/linux/debian'
+    # Raspberry Pi specific commands or actions
+else
+    # Check if running on Ubuntu
+    if [[ $(lsb_release -si) == "Ubuntu" ]]; then
+        echo "Running on Ubuntu"
+        DOCKERURL='https://download.docker.com/linux/ubuntu'
+    else
+        echo "Unknown operating system"
+        # Handle other operating systems if needed
+    fi
+fi
+
     # Add Docker's official GPG key:
     sudo apt update
     for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
