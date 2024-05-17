@@ -16,7 +16,7 @@ else
     # Check if running on Fedora
     if [[ $(lsb_release -si) == "Fedora" ]]; then
         echo "Running on Fedora"
-        DOCKERURL='https://download.docker.com/linux/fedora'
+        DOCKERURL='https://download.docker.com/linux/fedora/docker-ce.repo'
     else
         echo "Unknown operating system"
         # Handle other operating systems if needed
@@ -57,6 +57,8 @@ if [[ $answer == "y" || $answer == "Y" ]]; then
 
         # Install Docker on Fedora
         if [[ $(lsb_release -si) == "Fedora" ]]; then
+            sudo dnf -y install dnf-plugins-core
+            sudo dnf config-manager --add-repo $DOCKERURL
             sudo dnf install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
             sudo systemctl enable docker
             sudo systemctl start docker
