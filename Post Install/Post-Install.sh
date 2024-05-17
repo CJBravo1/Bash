@@ -37,7 +37,7 @@ if [ "$(lsb_release -si)" = "Fedora" ]; then
     sudo dnf update -y
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune lolcat vim nano htop -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop -y
 
     # Add Bashrc Greeting
     echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
