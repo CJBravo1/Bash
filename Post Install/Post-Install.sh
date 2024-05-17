@@ -4,7 +4,7 @@
 
 
 # Check if the OS is Debian-based
-if [ "$(lsb_release -si)" = "Debian" ]; then
+if [ "$(lsb_release -si)" = "Debian" ] || [ "$(lsb_release -si)" = "Ubuntu" ]; then
     #Start with Updates
     echo "Running: sudo apt update"
     sudo apt update 
