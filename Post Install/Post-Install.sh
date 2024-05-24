@@ -22,6 +22,10 @@ if [ "$(lsb_release -si)" = "Fedora" ]; then
     echo "Running: sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf"
     sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf
 
+    # Set DNF Default to Yes
+    echo "Running: sudo sed -i 's/^#default_yes=default_no/default_yes=default_yes/' /etc/dnf/dnf.conf"
+    sudo sed -i 's/^#default_yes=default_no/default_yes=default_yes/' /etc/dnf/dnf.conf
+
     #Start with Updates
     echo "Running: sudo dnf makecache"
     sudo dnf makecache
