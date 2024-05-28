@@ -1,7 +1,5 @@
 #!/bin/bash
-# DebianInstall.sh
-# This script installs the necessary packages for a Debian system
-
+#Run this after OS install. This script will install some standard packages and set up some basic configurations.
 
 # Check if the OS is Debian-based
 if [ "$(lsb_release -si)" = "Debian" ] || [ "$(lsb_release -si)" = "Ubuntu" ]; then
