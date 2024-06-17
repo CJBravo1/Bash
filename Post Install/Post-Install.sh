@@ -2,7 +2,7 @@
 #Run this after OS install. This script will install some standard packages and set up some basic configurations.
 
 # Check if the OS is Debian-based
-if [ "$(lsb_release -si)" = "Debian" ] || [ "$(lsb_release -si)" = "Ubuntu" ]; then
+if [ -f /etc/os-release ] && grep -q -E '^(ID|ID_LIKE)="?(debian|ubuntu)"?' /etc/os-release; then
     #Start with Updates
     echo "Running: sudo apt update"
     sudo apt update 
@@ -15,7 +15,7 @@ if [ "$(lsb_release -si)" = "Debian" ] || [ "$(lsb_release -si)" = "Ubuntu" ]; t
 fi
 
 # Check if the OS is Fedora
-if [ "$(lsb_release -si)" = "Fedora" ]; then
+if [ -f /etc/os-release ] && grep -q -E '^(ID|ID_LIKE)="?(fedora)"?' /etc/os-release; then
     # Set DNF Parallel Downloads
     echo "Running: sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf"
     sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf
