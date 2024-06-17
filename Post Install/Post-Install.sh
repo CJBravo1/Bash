@@ -31,8 +31,20 @@ if [ "$(lsb_release -si)" = "Fedora" ]; then
     sudo dnf update -y
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable -y
-    sudo dnf remove firefox libreoffice -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop gh -y
+    
+    # Check if a desktop environment is installed
+    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+        echo "Desktop environment is installed"
+        #Install Extensions
+        sudo dnf install gnome-tweaks gnome-shell-extension-dash-to-dock gnome-shell-extension-appindicator -y
+        
+        #Install Applications
+        sudo dnf install google-chrome-stable dropbox -y
+
+    else
+        echo "No desktop environment is installed"
+    fi
 fi
 
 # Add Bashrc Greeting
