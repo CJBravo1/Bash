@@ -6,7 +6,6 @@ if [ -f /etc/redhat-release ]; then
     # Add your Red Hat specific commands here
     sudo dnf install gh -y
 fi
-fi
 
 # Check if the OS is Debian based
 if [ -f /etc/debian_version ]; then
