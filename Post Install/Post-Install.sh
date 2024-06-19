@@ -55,7 +55,18 @@ if [ "$(lsb_release -si)" = "Debian" ] || [ "$(lsb_release -si)" = "Ubuntu" ]; t
     sudo apt upgrade -y
     # Install Standard Packages
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
-    sudo apt install toilet fortune lolcat vim nano htop gh -y
+    sudo apt install toilet fortune lolcat vim nano htop gh  -y
+
+    # Check if Flatpak is installed
+    if ! command -v flatpak >/dev/null 2>&1; then
+        # Install Flatpak
+        echo "Installing Flatpak"
+        sudo apt install flatpak -y
+        sudo apt update
+        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    else
+        echo "Flatpak is already installed"
+    fi
 
 # Check if the OS is Fedora
 elif [ "$(lsb_release -si)" = "Fedora" ]; then
@@ -74,7 +85,7 @@ elif [ "$(lsb_release -si)" = "Fedora" ]; then
     sudo dnf update -y
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable gh -y
     sudo dnf remove firefox libreoffice -y
 fi
 
