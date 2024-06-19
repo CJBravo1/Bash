@@ -76,17 +76,19 @@ elif [ "$(lsb_release -si)" = "Fedora" ]; then
     echo "Running: Standard Package Installs"
     sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable -y
     sudo dnf remove firefox libreoffice -y
+fi
 
-    # Check if a desktop environment is installed
-    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
-        # Install Flatpacks
-        echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
-        installFlatpacks
 
-        # Install Google Chrome
-        echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
-        installGoogleChrome
-    fi
+
+# Check if a desktop environment is installed
+if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+    # Install Flatpacks
+    echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
+    installFlatpacks
+
+    # Install Google Chrome
+    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+    installGoogleChrome
 fi
 
 # Add Bashrc Greeting
@@ -100,19 +102,8 @@ if [ "$install_copilot" = "y" ]; then
     installGhCopilot
 fi
 
-# Check if a desktop environment is installed
-if [ -n "$XDG_CURRENT_DESKTOP" ]; then
-    # Install Flatpacks
-    echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
-    installFlatpacks
-
-    # Install Google Chrome
-    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
-    installGoogleChrome
-fi
-
 # Create SSH Keys
 echo "Creating SSH Keys"
 ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
 
-echo "End of Script"
+echo -e "\e[32End of Script\e[0m"  # Echo in green color]"
