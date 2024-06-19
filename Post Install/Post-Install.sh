@@ -85,7 +85,7 @@ elif [ "$(lsb_release -si)" = "Fedora" ]; then
     sudo dnf update -y
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable gh -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable gh pv -y
     sudo dnf remove firefox libreoffice -y
 fi
 
