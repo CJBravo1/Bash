@@ -47,7 +47,7 @@ installGoogleChrome() {
 }
 
 # Check if the OS is Debian-based
-if [ "$(lsb_release -si)" = "Debian" ] || [ "$(lsb_release -si)" = "Ubuntu" ]; then
+if [ -f /etc/debian_version ]; then
     # Start with Updates
     echo "Running: sudo apt update"
     sudo apt update
@@ -69,7 +69,7 @@ if [ "$(lsb_release -si)" = "Debian" ] || [ "$(lsb_release -si)" = "Ubuntu" ]; t
     fi
 
 # Check if the OS is Fedora
-elif [ "$(lsb_release -si)" = "Fedora" ]; then
+elif [ -f /etc/redhat-release ];; then
     # Set DNF Parallel Downloads
     echo "Running: sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf"
     sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf
