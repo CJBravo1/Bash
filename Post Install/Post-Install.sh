@@ -69,7 +69,7 @@ if [ -f /etc/debian_version ]; then
     fi
 
 # Check if the OS is Fedora
-elif [ -f /etc/redhat-release ];; then
+elif [ -f /etc/redhat-release ]; then
     # Set DNF Parallel Downloads
     echo "Running: sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf"
     sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf
