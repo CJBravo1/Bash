@@ -31,7 +31,7 @@ installFlatpacks() {
 # Google Chrome for Ubuntu
 installGoogleChrome() {
     # Check if the OS is Ubuntu
-    if [ "$(lsb_release -si)" = "Ubuntu" ]; then
+    if [ -f /etc/debian_version ]; then
         # Check if Google Chrome is installed
         if ! dpkg -s google-chrome-stable >/dev/null 2>&1; then
             # Install Google Chrome
