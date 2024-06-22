@@ -2,7 +2,6 @@
 # Run this after OS install. This script will install some standard packages and set up some basic configurations.
 
 # Functions
-# Check if gh is installed via dnf
 installGhCopilot() {
     if command -v gh >/dev/null 2>&1; then
         echo "gh is installed"
@@ -14,7 +13,6 @@ installGhCopilot() {
     fi
 }
 
-# Flatpacks
 installFlatpacks() {
     flatpaks=(
         app.drey.Damask
@@ -22,13 +20,12 @@ installFlatpacks() {
         com.transmissionbt.Transmission
         org.raspberrypi.rpi-imager
     )
-    for flatpak in "${flatpaks[@]}"; do
-        echo -e "\e[32mInstalling $flatpak\e[0m"  # Echo in green color
-        flatpak install -y $flatpak
-    done
+    # Install all flatpaks at once
+    echo -e "\e[32mInstalling ${flatpaks[@]}\e[0m"  # Echo in green color
+    # This command installs the Flatpaks specified in the 'flatpaks' array.
+    flatpak install -y ${flatpaks[@]}
 }
 
-# Google Chrome for Ubuntu
 installGoogleChrome() {
     # Check if the OS is Ubuntu
     if [ -f /etc/debian_version ]; then
@@ -89,8 +86,6 @@ elif [ -f /etc/redhat-release ]; then
     sudo dnf remove firefox libreoffice -y
 fi
 
-
-
 # Check if a desktop environment is installed
 if [ -n "$XDG_CURRENT_DESKTOP" ]; then
     # Install Flatpacks
@@ -117,4 +112,4 @@ fi
 echo "Creating SSH Keys"
 ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
 
-echo -e "\e[32End of Script\e[0m"  # Echo in green color]"
+echo -e "\e[32End of Script\e[0m"  # Echo in green color
