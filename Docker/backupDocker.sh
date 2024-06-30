@@ -21,6 +21,10 @@ if [ -d "$NFS_MOUNT" ]; then
     done
 
     echo "Docker containers backup completed!"
+    
+    # Remove backups older than 3 weeks
+    find "$NFS_MOUNT" -type f -name "*.tar" -mtime +21 -exec rm {} \;
+    echo "Old backups removed!"
 
 else
     echo "NFS mount does not exist at $NFS_MOUNT"
