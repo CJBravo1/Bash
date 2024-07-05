@@ -99,7 +99,7 @@ if [[ $1 == "-OpenWebUi" ]]; then
     fi
 
     # Install Ollama Web Interface
-    sudo docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://$hostname -v open-webui:/app/backend/data --name open-webui --network bridge --restart always ghcr.io/open-webui/open-webui:main
+    sudo docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=http://$hostname:11434 -v open-webui:/app/backend/data --name open-webui --network bridge --restart always ghcr.io/open-webui/open-webui:main
 else
     echo "Please specify an option"
     echo "-- Options --"
