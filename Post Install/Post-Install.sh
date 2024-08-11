@@ -63,6 +63,15 @@ if [ -f /etc/debian_version ]; then
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     else
         echo "Flatpak is already installed"
+
+        # Check if the computer is a Raspberry Pi and install Cockpit for remote management
+        if [ "$(uname -m)" = "armv7l" ]; then
+            # Install Cockpit
+            echo "Installing Cockpit"
+            sudo apt install cockpit -y
+            sudo systemctl enable --now cockpit.socket
+            echo "Cockpit is now available at https://$(hostname -I | awk '{print $1}'):9090"
+        fi
     fi
 
 # Check if the OS is Fedora
@@ -112,4 +121,9 @@ fi
 echo "Creating SSH Keys"
 ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
 
+#Restart the shell
+source ~/.bashrc
+
+# End of Script
 echo -e "\e[32End of Script\e[0m"  # Echo in green color
+
