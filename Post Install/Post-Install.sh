@@ -2,6 +2,16 @@
 # Run this after OS install. This script will install some standard packages and set up some basic configurations.
 
 # Functions
+
+cloneBashScripts() {
+    # Clone the Bash Scripts repository
+    if [ -d ~/Scripts/Bash ]; then
+        echo "Bash directory already exists"
+    else
+        echo "Cloning Bash Scripts repository"
+        mkdir -p ~/Scripts
+        git clone https://github.com/cjbravo1/bash ~/Scripts/Bash
+}
 installGhCopilot() {
     if command -v gh >/dev/null 2>&1; then
         echo "gh is installed"
@@ -67,10 +77,15 @@ if [ -f /etc/debian_version ]; then
         # Check if the computer is a Raspberry Pi and install Cockpit for remote management
         if [ "$(uname -m)" = "armv7l" ]; then
             # Install Cockpit
-            echo "Installing Cockpit"
-            sudo apt install cockpit -y
-            sudo systemctl enable --now cockpit.socket
-            echo "Cockpit is now available at https://$(hostname -I | awk '{print $1}'):9090"
+            # Ask if the user wants to install Cockpit
+            read -p "Do you want to install Cockpit for remote management? (y/n): " install_cockpit
+            if [ "$install_cockpit" = "y" ]; then
+                # Install Cockpit
+                echo "Installing Cockpit"
+                sudo apt install cockpit -y
+                sudo systemctl enable --now cockpit.socket
+                echo "Cockpit is now available at https://$(hostname -I | awk '{print $1}'):9090"
+            fi
         fi
     fi
 
@@ -107,9 +122,17 @@ if [ -n "$XDG_CURRENT_DESKTOP" ]; then
 fi
 
 # Add Bashrc Greeting
-echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
-echo 'uptime -p | lolcat' >> ~/.bashrc
-echo 'fortune -s | lolcat' >> ~/.bashrc
+if ! grep -q "Welcome to $(hostname)" ~/.bashrc; then
+    echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
+fi
+
+if ! grep -q "uptime -p" ~/.bashrc; then
+    echo 'uptime -p | lolcat' >> ~/.bashrc
+fi
+
+if ! grep -q "fortune -s" ~/.bashrc; then
+    echo 'fortune -s | lolcat' >> ~/.bashrc
+fi
 
 # Check if the user wants to install GitHub Copilot
 read -p "Do you want to install GitHub Copilot? (y/n): " install_copilot
