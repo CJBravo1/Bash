@@ -1,11 +1,48 @@
 #!/bin/bash
 # Run this after OS install. This script will install some standard packages and set up some basic configurations.
 
-####Functions####
 
+
+# Set variables
+ACTUAL_USER=$SUDO_USER
+ACTUAL_HOME=$(eval echo ~$SUDO_USER)
+LOG_FILE="/var/log/PostInstall.log"
+
+####Functions####
+###Script Functions###
+get_timestamp() {
+    date +"%Y-%m-%d %H:%M:%S"
+}
+
+handle_error() {
+    local exit_code=$?
+    local message="$1"
+    if [ $exit_code -ne 0 ]; then
+        log_message "ERROR: $message"
+        exit $exit_code
+    fi
+}
+
+log_message() {
+    local message="$1"
+    echo "$(get_timestamp) - $message" | tee -a "$LOG_FILE"
+}
+
+
+backup_file() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        cp "$file" "$file.bak"
+        handle_error "Failed to backup $file"
+        log_message "Backed up $file"
+    fi
+}
+
+###Install Functions###
 cloneBashScripts() {
+    log_message "Cloning Bash Scripts repository"
     # Clone the Bash Scripts repository
-    if [ -d ~/Scripts/Bash ]; then
+    if [ -d $ACTUAL_HOME/Scripts/Bash ]; then
         echo "Bash directory already exists"
     else
         echo "Cloning Bash Scripts repository"
@@ -15,6 +52,7 @@ cloneBashScripts() {
 }
 
 installGhCopilot() {
+    log_message "Installing GitHub Copilot"
     if command -v gh >/dev/null 2>&1; then
         echo "gh is installed"
         gh auth login
@@ -26,6 +64,7 @@ installGhCopilot() {
 }
 
 installFlatpacks() {
+    log_message "Installing Flatpaks"
     flatpaks=(
         app.drey.Damask
         com.spotify.Client
@@ -40,6 +79,7 @@ installFlatpacks() {
 }
 
 installGoogleChrome() {
+    log_message "Installing Google Chrome"
     # Check if the OS is Ubuntu
     if [ -f /etc/debian_version ]; then
         # Check if Google Chrome is installed
@@ -57,7 +97,9 @@ installGoogleChrome() {
 }
 
 
+####OS Specific Functions####
 installDebian() {    
+    log_message "Performing system upgrade... This may take a while..."
     # Start with Updates
     echo "Running: sudo apt update"
     sudo apt update
@@ -94,9 +136,12 @@ installDebian() {
 }
 
 installFedora() {
+    log_message "Performing system upgrade... This may take a while..."
+    
     # Set DNF Parallel Downloads
-    echo "max_parallel_downloads=10" | tee -a /etc/dnf/dnf.conf > /dev/null
-    echo "fastestmirror=True" | tee -a /etc/dnf/dnf.conf > /dev/null
+    sudo cp "/etc/dnf/dnf.conf" "/etc/dnf/dnf.conf.bak"
+    echo "max_parallel_downloads=10" | sudo tee -a /etc/dnf/dnf.conf > /dev/null
+    echo "fastestmirror=True" | sudo tee -a /etc/dnf/dnf.conf > /dev/null
     dnf -y install dnf-plugins-core
 
     # Set DNF Default to Yes
@@ -117,25 +162,33 @@ installFedora() {
     echo "Running: Standard Package Installs"
     sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch -y
     sudo dnf remove firefox libreoffice -y
-fi
+
+    # Check for firmware updates
+    log_message "Checking for firmware updates..."
+    sudo fwupdmgr refresh --force
+    sudo fwupdmgr get-updates
+    sudo fwupdmgr update -y
 }
 
+###Post Install Functions###
 addBashGreeting()
     {
-if ! grep -q "Welcome to $(hostname)" ~/.bashrc; then
-    echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
-fi
+        if ! grep -q "Welcome to $(hostname)" ~/.bashrc; then
+        echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
+        fi
 
-if ! grep -q "uptime -p" ~/.bashrc; then
-    echo 'uptime -p | lolcat' >> ~/.bashrc
-fi
+        if ! grep -q "uptime -p" ~/.bashrc; then
+            echo 'uptime -p | lolcat' >> ~/.bashrc
+        fi
 
-if ! grep -q "fortune -s" ~/.bashrc; then
-    echo 'fortune -s | lolcat' >> ~/.bashrc
-fi
+        if ! grep -q "fortune -s" ~/.bashrc; then
+            echo 'fortune -s | lolcat' >> ~/.bashrc
+        fi
     }
 
 #####START OF SCRIPT#####
+cloneBashScripts
+
 # Check if the OS is Debian-based
 if [ -f /etc/debian_version ]; then
     installDebian
@@ -179,5 +232,5 @@ ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
 source ~/.bashrc
 
 # End of Script
-echo -e "\e[32End of Script\e[0m"  # Echo in green color
+echo -e "\e[32EEnd of Script\e[0m"  # Echo in green color
 
