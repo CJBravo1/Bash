@@ -11,7 +11,9 @@ cloneBashScripts() {
         echo "Cloning Bash Scripts repository"
         mkdir -p ~/Scripts
         git clone https://github.com/cjbravo1/bash ~/Scripts/Bash
+    fi
 }
+
 installGhCopilot() {
     if command -v gh >/dev/null 2>&1; then
         echo "gh is installed"
@@ -29,6 +31,7 @@ installFlatpacks() {
         com.spotify.Client
         com.transmissionbt.Transmission
         org.raspberrypi.rpi-imager
+        io.missioncenter.MissionCenter
     )
     # Install all flatpaks at once
     echo -e "\e[32mInstalling ${flatpaks[@]}\e[0m"  # Echo in green color
@@ -92,21 +95,27 @@ if [ -f /etc/debian_version ]; then
 # Check if the OS is Fedora
 elif [ -f /etc/redhat-release ]; then
     # Set DNF Parallel Downloads
-    echo "Running: sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf"
-    sudo sed -i 's/^max_parallel_downloads=.*/max_parallel_downloads=10/' /etc/dnf/dnf.conf
+    echo "max_parallel_downloads=10" | tee -a /etc/dnf/dnf.conf > /dev/null
+    echo "fastestmirror=True" | tee -a /etc/dnf/dnf.conf > /dev/null
+    dnf -y install dnf-plugins-core
 
     # Set DNF Default to Yes
-    echo "Running: sudo sed -i 's/^#default_yes=default_no/default_yes=default_yes/' /etc/dnf/dnf.conf"
     sudo sed -i 's/^#default_yes=default_no/default_yes=default_yes/' /etc/dnf/dnf.conf
+
+    # Enable RPM Fusion repositories to access additional software packages and codecs
+    dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+    dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+    dnf group update core -y
 
     # Start with Updates
     echo "Running: sudo dnf makecache"
     sudo dnf makecache
     echo "Running: sudo dnf update -y"
     sudo dnf update -y
+
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable gh pv -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable gh pv fastfetch -y
     sudo dnf remove firefox libreoffice -y
 fi
 
