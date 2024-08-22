@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run this after OS install. This script will install some standard packages and set up some basic configurations.
 
-# Functions
+####Functions####
 
 cloneBashScripts() {
     # Clone the Bash Scripts repository
@@ -56,8 +56,8 @@ installGoogleChrome() {
     fi
 }
 
-# Check if the OS is Debian-based
-if [ -f /etc/debian_version ]; then
+
+installDebian() {    
     # Start with Updates
     echo "Running: sudo apt update"
     sudo apt update
@@ -91,9 +91,9 @@ if [ -f /etc/debian_version ]; then
             fi
         fi
     fi
+}
 
-# Check if the OS is Fedora
-elif [ -f /etc/redhat-release ]; then
+installFedora() {
     # Set DNF Parallel Downloads
     echo "max_parallel_downloads=10" | tee -a /etc/dnf/dnf.conf > /dev/null
     echo "fastestmirror=True" | tee -a /etc/dnf/dnf.conf > /dev/null
@@ -115,22 +115,13 @@ elif [ -f /etc/redhat-release ]; then
 
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop google-chrome-stable gh pv fastfetch -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch -y
     sudo dnf remove firefox libreoffice -y
 fi
+}
 
-# Check if a desktop environment is installed
-if [ -n "$XDG_CURRENT_DESKTOP" ]; then
-    # Install Flatpacks
-    echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
-    installFlatpacks
-
-    # Install Google Chrome
-    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
-    installGoogleChrome
-fi
-
-# Add Bashrc Greeting
+addBashGreeting()
+    {
 if ! grep -q "Welcome to $(hostname)" ~/.bashrc; then
     echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
 fi
@@ -142,6 +133,37 @@ fi
 if ! grep -q "fortune -s" ~/.bashrc; then
     echo 'fortune -s | lolcat' >> ~/.bashrc
 fi
+    }
+
+#####START OF SCRIPT#####
+# Check if the OS is Debian-based
+if [ -f /etc/debian_version ]; then
+    installDebian
+# Check if the OS is Fedora
+elif [ -f /etc/redhat-release ]; then
+    installFedora
+    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+    #Install Google Chrome
+    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+    sudo dnf install google-chrome-stable -y
+    fi
+fi
+
+#Add Bash Greeting
+addBashGreeting
+
+# Install Flatpacks and Google Chrome
+if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+    # Install Flatpacks
+    echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
+    installFlatpacks
+
+    # Install Google Chrome
+    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+    installGoogleChrome
+fi
+
+
 
 # Check if the user wants to install GitHub Copilot
 read -p "Do you want to install GitHub Copilot? (y/n): " install_copilot
