@@ -42,7 +42,7 @@ backup_file() {
 cloneBashScripts() {
     log_message "Cloning Bash Scripts repository"
     # Clone the Bash Scripts repository
-    if [ -d $ACTUAL_HOME/Scripts/Bash ]; then
+    if [ -d $ACTUAL_HOME/Scripts/bash ]; then
         echo "Bash directory already exists"
     else
         echo "Cloning Bash Scripts repository"
@@ -68,9 +68,13 @@ installFlatpacks() {
     flatpaks=(
         app.drey.Damask
         com.spotify.Client
-        com.transmissionbt.Transmission
-        org.raspberrypi.rpi-imager
+        #com.transmissionbt.Transmission
+        #org.raspberrypi.rpi-imager
         io.missioncenter.MissionCenter
+        io.github.sigmasd.stimulator
+        org.gnome.World.PikaBackup
+        io.missioncenter.MissionCenter
+
     )
     # Install all flatpaks at once
     echo -e "\e[32mInstalling ${flatpaks[@]}\e[0m"  # Echo in green color
