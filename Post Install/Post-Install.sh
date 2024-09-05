@@ -74,6 +74,7 @@ installFlatpacks() {
         io.github.sigmasd.stimulator
         org.gnome.World.PikaBackup
         io.missioncenter.MissionCenter
+        io.github.realmazharhussain.GdmSettings
 
     )
     # Install all flatpaks at once
