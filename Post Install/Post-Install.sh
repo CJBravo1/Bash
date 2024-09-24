@@ -57,7 +57,7 @@ installGhCopilot() {
         echo "gh is installed"
         gh auth login
         gh extension install github/gh-copilot
-        gh copilot alias bash >> ~/.bashrc
+        #gh copilot alias bash >> ~/.bashrc
     else
         echo "gh is not installed"
     fi
@@ -67,14 +67,16 @@ installFlatpacks() {
     log_message "Installing Flatpaks"
     flatpaks=(
         app.drey.Damask
+        com.dropbox.Client
+        com.mattjakeman.ExtensionManager
         com.spotify.Client
-        #com.transmissionbt.Transmission
+        com.transmissionbt.Transmission
         #org.raspberrypi.rpi-imager
-        io.missioncenter.MissionCenter
-        io.github.sigmasd.stimulator
-        org.gnome.World.PikaBackup
-        io.missioncenter.MissionCenter
         io.github.realmazharhussain.GdmSettings
+        io.github.sigmasd.stimulator
+        io.missioncenter.MissionCenter
+        org.gnome.World.PikaBackup
+        
 
     )
     # Install all flatpaks at once
