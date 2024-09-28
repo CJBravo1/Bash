@@ -114,7 +114,7 @@ installDebian() {
     sudo apt upgrade -y
     # Install Standard Packages
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
-    sudo apt install toilet fortune lolcat vim nano htop gh  -y
+    sudo apt install toilet fortune lolcat vim nano htop gh nfs-common  -y
 
     # Check if Flatpak is installed
     if ! command -v flatpak >/dev/null 2>&1; then
