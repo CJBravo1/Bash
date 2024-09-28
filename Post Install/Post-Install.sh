@@ -76,6 +76,7 @@ installFlatpacks() {
         io.github.sigmasd.stimulator
         io.missioncenter.MissionCenter
         org.gnome.World.PikaBackup
+        org.remmina.Remmina
         
 
     )
