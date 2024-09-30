@@ -33,20 +33,14 @@ function update_rclone {
     rclone copy GooglePhotos:album/ ~/Pictures --progress
 }
 
-function dropbox_backup {
-        # Check if directory exists
-    if [ -d "$backupDirectory" ]; then
-        # Directory exists, assign it to the variable
-
-    else
-        # Directory does not exist, create it
-        mkdir -vp "$backupDirectory/bashfiles"
-    fi
-}
-
-
 #Config Backup
 function config_backup {
+    # Create backup directory if it does not exist
+    if [ ! -d "$backupDirectory" ]; then
+        echo "Backup directory does not exist. Creating it..."
+        mkdir -p "$backupDirectory/bashfiles"
+    fi
+
     # Check if directory exists
     if [ -d "$backupDirectory" ]; then
         # Backup .bashrc 
