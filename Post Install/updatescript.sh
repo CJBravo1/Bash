@@ -1,7 +1,7 @@
 #!/bin/bash
 #Run Updates
 poweroff=false
-backupDirectory="~/Dropbox/Linux Config/$HOSTNAME"
+backupDirectory="$HOME/Dropbox/Linux Config/$HOSTNAME"
 
 #Update System
 function update_system {
