@@ -1,6 +1,7 @@
 #!/bin/bash
 #Run Updates
 poweroff=false
+reboot=false
 backupDirectory="$HOME/Dropbox/Linux Config/$HOSTNAME"
 
 #Update System
@@ -30,7 +31,7 @@ function update_rclone {
 
     #Sync Google Photos to Pictures
     echo "Syncing Google Photos to Pictures"
-    rclone copy GooglePhotos:album/ ~/Pictures --progress
+    rclone copy GooglePhotos:album/ $HOME/Pictures --progress
 }
 
 #Config Backup
@@ -38,33 +39,15 @@ function config_backup {
     # Create backup directory if it does not exist
     if [ ! -d "$backupDirectory" ]; then
         echo "Backup directory does not exist. Creating it..."
+        mkdir -p "$backupDirectory"
+    fi
         mkdir -p "$backupDirectory/bashfiles"
-    fi
+        mkdir -p "$backupDirectory/sshConfig"
+        for file in "$HOME"/.bash*; do
+            [ -e "$file" ] && cp -Rv "$file" "$backupDirectory/bashfiles"
+        done
+        cp -Rv "$HOME/.ssh" "$backupDirectory/sshConfig"
 
-    # Check if directory exists
-    if [ -d "$backupDirectory" ]; then
-        # Backup .bashrc 
-        if [ -f "~/.bashrc" ]; then
-            echo "Backing up .bashrc..."
-            cp -f "~/.bashrc" "$backupDirectory"
-        fi
-
-        # Backup hidden bash files
-        if [ -n "$(find "$HOME" -maxdepth 1 -name '.bash*' -type f)" ]; then
-            echo "Backing up hidden bash files..."
-            cp -f "$HOME/.bash"* "$backupDirectory/bashfiles"
-            # Remove "." from hidden files
-            find "$backupDirectory/bashfiles" -name ".bash*" -type f -exec rename 's/^\.\b//' {} +
-        else
-            echo "No hidden bash files found. Skipping backup."
-        fi
-
-        # Backup Updatescript.sh
-        if [ -f '~/updatescript.sh' ]; then
-            echo "Backing up Updatescript.sh..."
-            cp '~/updatescript.sh' "$backupDirectory"
-        fi
-    fi
 }
 
 # If no options are specified, run all functions
@@ -74,6 +57,10 @@ for option in "$@"; do
         -poweroff)
             echo "System will power off after updates and syncs."
             poweroff=true
+            ;;
+        -reboot)
+            echo "System will reboot after updates and syncs."
+            reboot=true
             ;;
         -update)
             echo "Running system update."
@@ -105,9 +92,21 @@ if [[ -z "$1" ]]; then
     config_backup
 fi
 
+if [ "$reboot" = true ]; then
+    echo "Rebooting after updates and syncs."
+    update_system
+    update_rclone
+    dropbox_backup
+    config_backup
+    sudo reboot
+fi
 
-if [ "$poweroff" = true ] ;
-then
-    echo "Powering off..."
+
+if [ "$poweroff" = true ]; then
+    echo "Powering off after updates and syncs."
+    update_system
+    update_rclone
+    dropbox_backup
+    config_backup
     sudo poweroff
 fi
