@@ -44,9 +44,9 @@ function config_backup {
         mkdir -p "$backupDirectory/bashfiles"
         mkdir -p "$backupDirectory/sshConfig"
         for file in "$HOME"/.bash*; do
-            [ -e "$file" ] && cp -Rv "$file" "$backupDirectory/bashfiles"
+            [ -e "$file" ] && cp -R "$file" "$backupDirectory/bashfiles"
         done
-        cp -Rv "$HOME/.ssh" "$backupDirectory/sshConfig"
+        cp -R "$HOME/.ssh" "$backupDirectory/sshConfig"
 
 }
 
