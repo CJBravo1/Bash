@@ -143,7 +143,6 @@ installDebian() {
             flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
         else
             echo "Flatpak is already installed"
-        fi
     fi
 
     # Check if the computer is a Raspberry Pi and install Cockpit for remote management
