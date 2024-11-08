@@ -85,6 +85,7 @@ installFlatpacks() {
         io.github.realmazharhussain.GdmSettings
         io.github.sigmasd.stimulator
         io.missioncenter.MissionCenter
+        #org.gnome.Firmware
         org.gnome.World.PikaBackup
         org.remmina.Remmina
         
@@ -125,7 +126,7 @@ installDebian() {
     sudo apt upgrade -y
     # Install Standard Packages
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
-    sudo apt install toilet fortune lolcat vim nano htop gh nfs-common  -y
+    sudo apt install toilet fortune lolcat vim nano htop gh nfs-common gnome-firmware  -y
 
     # Set DNS Settings
     if [[ $(hostname -I) =~ 192\.168\.12\.[0-9]+ ]] && [[ $(hostname -I) != "192.168.12.234" ]]; then
@@ -186,7 +187,7 @@ installFedora() {
 
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch gnome-firmware -y
     sudo dnf remove firefox libreoffice -y
 
     # Check for firmware updates
