@@ -61,6 +61,10 @@ cloneBashScripts() {
     fi
 }
 
+installDocker(){
+    curl -sSL https://get.docker.com | sh
+}
+
 installGhCopilot() {
     log_message "Installing GitHub Copilot"
     if command -v gh >/dev/null 2>&1; then
@@ -226,6 +230,12 @@ elif [ -f /etc/redhat-release ]; then
     echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
     sudo dnf install google-chrome-stable -y
     fi
+fi
+
+# Install Docker
+read -p "Do you want to install Docker? (y/n): " install_docker
+if [ "$install_docker" = "y" ]; then
+    installDocker
 fi
 
 #Add Bash Greeting
