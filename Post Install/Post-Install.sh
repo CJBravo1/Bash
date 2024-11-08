@@ -14,6 +14,16 @@ get_timestamp() {
     date +"%Y-%m-%d %H:%M:%S"
 }
 
+check_window_manager() {
+    if [ -n "$XDG_CURRENT_DESKTOP" ] || [ -n "$DESKTOP_SESSION" ]; then
+        log_message "Window manager is installed"
+        return 0
+    else
+        log_message "No window manager detected"
+        return 1
+    fi
+}
+
 handle_error() {
     local exit_code=$?
     local message="$1"
@@ -117,30 +127,38 @@ installDebian() {
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
     sudo apt install toilet fortune lolcat vim nano htop gh nfs-common  -y
 
+    # Set DNS Settings
+    if [[ $(hostname -I) =~ 192\.168\.12\.[0-9]+ ]] && [[ $(hostname -I) != "192.168.12.234" ]]; then
+        echo "Setting DNS to 192.168.12.234"
+        echo "nameserver 192.168.12.234" | sudo tee /etc/resolv.conf > /dev/null
+    fi
+
     # Check if Flatpak is installed
     if ! command -v flatpak >/dev/null 2>&1; then
-        # Install Flatpak
-        echo "Installing Flatpak"
-        sudo apt install flatpak -y
-        sudo apt update
-        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    else
-        echo "Flatpak is already installed"
-
-        # Check if the computer is a Raspberry Pi and install Cockpit for remote management
-        if [ "$(uname -m)" = "armv7l" ]; then
-            # Install Cockpit
-            # Ask if the user wants to install Cockpit
-            read -p "Do you want to install Cockpit for remote management? (y/n): " install_cockpit
-            if [ "$install_cockpit" = "y" ]; then
-                # Install Cockpit
-                echo "Installing Cockpit"
-                sudo apt install cockpit -y
-                sudo systemctl enable --now cockpit.socket
-                echo "Cockpit is now available at https://$(hostname -I | awk '{print $1}'):9090"
-            fi
+            # Install Flatpak
+            echo "Installing Flatpak"
+            sudo apt install flatpak -y
+            sudo apt update
+            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        else
+            echo "Flatpak is already installed"
         fi
     fi
+
+    # Check if the computer is a Raspberry Pi and install Cockpit for remote management
+    if [ "$(uname -m)" = "armv7l" ]; then
+        # Install Cockpit
+        # Ask if the user wants to install Cockpit
+        read -p "Do you want to install Cockpit for remote management? (y/n): " install_cockpit
+        if [ "$install_cockpit" = "y" ]; then
+            # Install Cockpit
+            echo "Installing Cockpit"
+            sudo apt install cockpit -y
+            sudo systemctl enable --now cockpit.socket
+            echo "Cockpit is now available at https://$(hostname -I | awk '{print $1}'):9090"
+        fi
+    fi
+    
 }
 
 installFedora() {
