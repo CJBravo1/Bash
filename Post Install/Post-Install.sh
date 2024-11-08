@@ -138,8 +138,10 @@ installDebian() {
         echo "nameserver 192.168.12.234" | sudo tee /etc/resolv.conf > /dev/null
     fi
 
-    # Check if Flatpak is installed
-    if ! command -v flatpak >/dev/null 2>&1; then
+    # Check if a window manager is installed
+    if check_window_manager; then
+        # Check if Flatpak is installed
+        if ! command -v flatpak >/dev/null 2>&1; then
             # Install Flatpak
             echo "Installing Flatpak"
             sudo apt install flatpak -y
@@ -147,6 +149,9 @@ installDebian() {
             flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
         else
             echo "Flatpak is already installed"
+        fi
+    else
+        echo "No window manager detected, skipping Flatpak installation"
     fi
 
     # Check if the computer is a Raspberry Pi and install Cockpit for remote management
