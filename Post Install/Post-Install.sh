@@ -205,11 +205,6 @@ installFedora() {
     sudo fwupdmgr update -y
 }
 
-###Post Install Functions###
-addGreetings()
-    {
-
-
 #####START OF SCRIPT#####
 cloneBashScripts
 
@@ -269,4 +264,3 @@ source ~/.bashrc
 
 # End of Script
 echo -e "\e[32EEnd of Script\e[0m"  # Echo in green color
-
