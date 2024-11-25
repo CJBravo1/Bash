@@ -216,14 +216,15 @@ cloneBashScripts
 # Check if the OS is Debian-based
 if [ -f /etc/debian_version ]; then
     installDebian
+fi
+
 # Check if the OS is Fedora
-elif [ -f /etc/redhat-release ]; then
+if [ -f /etc/redhat-release ]; then
     installFedora
     if [ -n "$XDG_CURRENT_DESKTOP" ]; then
     #Install Google Chrome
     echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
     sudo dnf install google-chrome-stable -y
-    fi
 fi
 
 # Install Docker
