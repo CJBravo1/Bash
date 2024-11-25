@@ -57,8 +57,10 @@ cloneBashScripts() {
     else
         echo "Cloning Bash Scripts repository"
         mkdir -p ~/Scripts
-        git clone https://github.com/cjbravo1/bash ~/Scripts/Bash
+        git clone https://github.com/cjbravo1/bash ~/Scripts/bash
     fi
+
+    POST_INSTALL_DIR="$ACTUAL_HOME/Scripts/bash/Post Install"
 }
 
 installDocker(){
@@ -230,12 +232,20 @@ if [ "$install_docker" = "y" ]; then
 fi
 
 #Add Bash Greeting
+addGreetings() {
 #Copy bash_aliases and bash_functions
-echo -e "\e[32mAdding Bash functions and aliases\e[0m"
-cp -v ~/Scripts/Bash/.bash_aliases ~/.bash_aliases
-cp -v ~/Scripts/Bash/.bash_functions ~/.bash_functions
 
-echo "greetings" >> ~/.bashrc
+echo -e "\e[32mAdding Bash functions and aliases\e[0m"
+
+cat "~/Scripts/bash/Post Install/.bashrc" >> ~/.bashrc
+cp -v "~/Scripts/bash/Post Install/.bash_aliases" ~/.bash_aliases
+cp -v "~/Scripts/bash/Post Install/.bash_functions ~/.bash_functions"
+
+
+
+#echo "greetings" >> ~/.bashrc
+}
+
 
 # Install Flatpacks and Google Chrome
 if [ -n "$XDG_CURRENT_DESKTOP" ]; then
