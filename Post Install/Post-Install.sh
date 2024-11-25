@@ -220,6 +220,7 @@ if [ -f /etc/redhat-release ]; then
     #Install Google Chrome
     echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
     sudo dnf install google-chrome-stable -y
+    fi
 fi
 
 # Install Docker
