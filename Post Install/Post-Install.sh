@@ -206,20 +206,9 @@ installFedora() {
 }
 
 ###Post Install Functions###
-addBashGreeting()
+addGreetings()
     {
-        if ! grep -q "Welcome to $(hostname)" ~/.bashrc; then
-        echo 'echo "Welcome to $(hostname)" | toilet -f term -F border --gay' >> ~/.bashrc
-        fi
 
-        if ! grep -q "uptime -p" ~/.bashrc; then
-            echo 'uptime -p | lolcat' >> ~/.bashrc
-        fi
-
-        if ! grep -q "fortune -s" ~/.bashrc; then
-            echo 'fortune -s | lolcat' >> ~/.bashrc
-        fi
-    }
 
 #####START OF SCRIPT#####
 cloneBashScripts
@@ -244,7 +233,13 @@ if [ "$install_docker" = "y" ]; then
 fi
 
 #Add Bash Greeting
-addBashGreeting
+#Copy bash_aliases and bash_functions
+echo -e "\e[32mAdding Bash functions and aliases\e[0m"
+cp -v ~/Scripts/Bash/.bash_aliases ~/.bash_aliases
+cp -v ~/Scripts/Bash/.bash_functions ~/.bash_functions
+
+echo "greetings" >> ~/.bashrc
+}
 
 # Install Flatpacks and Google Chrome
 if [ -n "$XDG_CURRENT_DESKTOP" ]; then
