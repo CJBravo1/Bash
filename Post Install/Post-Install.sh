@@ -231,12 +231,6 @@ if [ -f /etc/redhat-release ]; then
     fi
 fi
 
-# Install Docker
-read -p "Do you want to install Docker? (y/n): " install_docker
-if [ "$install_docker" = "y" ]; then
-    installDocker
-fi
-
 # Install Flatpacks and Google Chrome
 if [ -n "$XDG_CURRENT_DESKTOP" ]; then
     # Install Flatpacks
@@ -248,7 +242,11 @@ if [ -n "$XDG_CURRENT_DESKTOP" ]; then
     installGoogleChrome
 fi
 
-
+# Install Docker
+read -p "Do you want to install Docker? (y/n): " install_docker
+if [ "$install_docker" = "y" ]; then
+    installDocker
+fi
 
 # Check if the user wants to install GitHub Copilot
 read -p "Do you want to install GitHub Copilot? (y/n): " install_copilot
