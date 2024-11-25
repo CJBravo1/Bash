@@ -48,19 +48,12 @@ backup_file() {
     fi
 }
 
-###Install Functions###
-cloneBashScripts() {
-    log_message "Cloning Bash Scripts repository"
-    # Clone the Bash Scripts repository
-    if [ -d $ACTUAL_HOME/Scripts/bash ]; then
-        echo "Bash directory already exists"
-    else
-        echo "Cloning Bash Scripts repository"
-        mkdir -p ~/Scripts
-        git clone https://github.com/cjbravo1/bash ~/Scripts/bash
-    fi
-
-    POST_INSTALL_DIR="$ACTUAL_HOME/Scripts/bash/Post Install"
+addGreetings() {
+#Copy bash_aliases and bash_functions
+echo -e "\e[32mAdding Bash functions and aliases\e[0m"
+cat ~/Scripts/bash/Post\ Install/.bashrc >> ~/.bashrc 
+cp -v ~/Scripts/bash/Post\ Install/.bash_aliases ~/
+cp -v ~/Scripts/bash/Post\ Install/.bash_functions ~/
 }
 
 installDocker(){
@@ -132,7 +125,7 @@ installDebian() {
     sudo apt upgrade -y
     # Install Standard Packages
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
-    sudo apt install toilet fortune lolcat vim nano htop gh nfs-common gnome-firmware  -y
+    sudo apt install toilet fortune lolcat vim nano htop gh nfs-common gnome-firmware uptime -y
 
     # Set DNS Settings
     if [[ $(hostname -I) =~ 192\.168\.12\.[0-9]+ ]] && [[ $(hostname -I) != "192.168.12.234" ]]; then
@@ -208,7 +201,20 @@ installFedora() {
 }
 
 #####START OF SCRIPT#####
-cloneBashScripts
+# Clone the Bash Scripts repository
+if ! command -v git >/dev/null 2>&1; then
+    echo "git is not installed. Please install git and rerun the script."
+    exit 1
+fi
+
+if [ -d $ACTUAL_HOME/Scripts/bash ]; then
+    echo "Bash directory already exists"
+else
+    echo "Cloning Bash Scripts repository"
+    mkdir -p ~/Scripts
+    git clone https://github.com/cjbravo1/bash ~/Scripts/bash
+    POST_INSTALL_DIR=$ACTUAL_HOME/Scripts/bash/Post\ Install
+fi
 
 # Check if the OS is Debian-based
 if [ -f /etc/debian_version ]; then
@@ -230,22 +236,6 @@ read -p "Do you want to install Docker? (y/n): " install_docker
 if [ "$install_docker" = "y" ]; then
     installDocker
 fi
-
-#Add Bash Greeting
-addGreetings() {
-#Copy bash_aliases and bash_functions
-
-echo -e "\e[32mAdding Bash functions and aliases\e[0m"
-
-cat "~/Scripts/bash/Post Install/.bashrc" >> ~/.bashrc
-cp -v "~/Scripts/bash/Post Install/.bash_aliases" ~/.bash_aliases
-cp -v "~/Scripts/bash/Post Install/.bash_functions ~/.bash_functions"
-
-
-
-#echo "greetings" >> ~/.bashrc
-}
-
 
 # Install Flatpacks and Google Chrome
 if [ -n "$XDG_CURRENT_DESKTOP" ]; then
@@ -269,6 +259,9 @@ fi
 # Create SSH Keys
 echo "Creating SSH Keys"
 ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
+
+# Add Bash Greetings
+addGreetings
 
 #Restart the shell
 source ~/.bashrc
