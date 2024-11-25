@@ -125,7 +125,7 @@ installDebian() {
     sudo apt upgrade -y
     # Install Standard Packages
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
-    sudo apt install toilet fortune lolcat vim nano htop gh nfs-common gnome-firmware -y
+    sudo apt install toilet fortune lolcat vim nano curl htop gh nfs-common gnome-firmware -y
 
     # Set DNS Settings
     if [[ $(hostname -I) =~ 192\.168\.12\.[0-9]+ ]] && [[ $(hostname -I) != "192.168.12.234" ]]; then
