@@ -190,7 +190,7 @@ installFedora() {
 
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch gnome-firmware -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch gnome-firmware rclone -y
     sudo dnf remove firefox libreoffice -y
 
     # Check for firmware updates
@@ -228,6 +228,13 @@ if [ -f /etc/redhat-release ]; then
     #Install Google Chrome
     echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
     sudo dnf install google-chrome-stable -y
+
+    #Install VSCode
+    echo -e "\e[32mInstalling Visual Studio Code\e[0m"  # Echo in green color
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+    dnf check-update
+    sudo dnf install code -y
     fi
 fi
 
