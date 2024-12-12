@@ -261,6 +261,12 @@ if [ "$install_copilot" = "y" ]; then
     installGhCopilot
 fi
 
+# Install Tailscale
+read -p "Do you want to install Tailscale? (y/n): " install_tailscale
+if [ "$install_tailscale" = "y" ]; then
+    curl -fsSL https://tailscale.com/install.sh | sh
+fi
+
 # Create SSH Keys
 echo "Creating SSH Keys"
 ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
