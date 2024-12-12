@@ -190,7 +190,7 @@ installFedora() {
 
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch gnome-firmware rclone -y
+    sudo dnf install toilet fortune-mod lolcat vim nano htop gh pv fastfetch gnome-firmware rclone mscore-fonts-all -y
     sudo dnf remove firefox libreoffice -y
 
     # Check for firmware updates
