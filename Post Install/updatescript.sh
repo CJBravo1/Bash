@@ -26,11 +26,13 @@ function update_system {
 
 function update_rclone {
     #Sync Google Photos to OneDrive -- This is now being done by Deepthought
-    echo "Syncing Google Photos to OneDrive"
+    echo -e "\e[32mSyncing Google Photos to OneDrive\e[0m"
+    echo ""
     rclone copy GooglePhotos:album/ OneDrive:Pictures/ --progress
 
     #Sync Google Photos to Pictures
-    echo "Syncing Google Photos to Pictures"
+    echo -e "\e[32mSyncing Google Photos to Pictures\e[0m"
+    echo ""
     rclone copy GooglePhotos:album/ $HOME/Pictures --progress
 }
 
