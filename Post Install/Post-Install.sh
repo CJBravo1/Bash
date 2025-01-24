@@ -77,6 +77,7 @@ installFlatpacks() {
     flatpaks=(
         app.drey.Damask
         com.dropbox.Client
+        com.github.tchx84.Flatseal
         com.mattjakeman.ExtensionManager
         com.spotify.Client
         com.transmissionbt.Transmission
@@ -87,7 +88,6 @@ installFlatpacks() {
         #org.gnome.Firmware
         org.gnome.World.PikaBackup
         org.remmina.Remmina
-        
 
     )
     # Install all flatpaks at once
@@ -224,10 +224,18 @@ fi
 # Check if the OS is Fedora
 if [ -f /etc/redhat-release ]; then
     installFedora
+   
     if [ -n "$XDG_CURRENT_DESKTOP" ]; then
-    #Install Google Chrome
-    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
-    sudo dnf install google-chrome-stable -y
+        #Install Google Chrome
+        if command -v flatpak >/dev/null 2>&1; then
+            echo -e "\e[32mInstalling Google Chrome via Flatpak\e[0m"  # Echo in green color
+            flatpak install -y com.google.Chrome
+            flatpak override --user --filesystem=~/.local/share/applications --filesystem=~/.local/share/icons com.google.Chrome
+        else
+            echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+            sudo dnf install google-chrome-stable -y
+        fi
+ 
 
     #Install VSCode
     echo -e "\e[32mInstalling Visual Studio Code\e[0m"  # Echo in green color
