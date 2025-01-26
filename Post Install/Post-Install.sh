@@ -114,7 +114,6 @@ installGoogleChromeDeb() {
         else
             echo "Google Chrome is already installed"
         fi
-    fi
 }
 
 installGoogleChromeRpm() {
@@ -124,7 +123,7 @@ installGoogleChromeRpm() {
 
 installGoogleChromeFlatpak() {
     echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
-    flatpak install flathub com.google.Chrome
+    flatpak install flathub com.google.Chrome -y
     flatpak override --user --filesystem=~/.local/share/applications --filesystem=~/.local/share/icons com.google.Chrome
 
 }
@@ -138,7 +137,6 @@ installVSCodeRPM()
     echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
     dnf check-update
     sudo dnf install code -y
-    fi
 }
 
 installVSCodeDeb(){
@@ -253,15 +251,16 @@ fi
 if [ -f /etc/debian_version ]; then
     installDebian
 
-if $Window_Manager; then
-    if $FLATPAK_INSTALLED; then
-        #Install Google Chrome
-        installGoogleChromeFlatpak
-    else
-        installGoogleChromeDeb
+    if $Window_Manager; then
+        if $FLATPAK_INSTALLED; then
+            #Install Google Chrome
+            installGoogleChromeFlatpak
+        else
+            installGoogleChromeDeb
+        fi
+        #Install Visual Studio Code
+        installVSCodeDeb
     fi
-    #Install Visual Studio Code
-    installVSCodeDeb
 fi
 
 # Check if the OS is Fedora
