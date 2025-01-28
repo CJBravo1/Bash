@@ -1,12 +1,16 @@
 #!/bin/bash
 # Run this after OS install. This script will install some standard packages and set up some basic configurations.
 
-
-
 # Set variables
 ACTUAL_USER=$SUDO_USER
 ACTUAL_HOME=$(eval echo ~$SUDO_USER)
 LOG_FILE="/var/log/PostInstall.log"
+
+# Check if Flatpak is installed
+FLATPAK_INSTALLED=false
+if command -v flatpak >/dev/null 2>&1; then
+    FLATPAK_INSTALLED=true
+fi
 
 ####Functions####
 ###Script Functions###
@@ -17,9 +21,11 @@ get_timestamp() {
 check_window_manager() {
     if [ -n "$XDG_CURRENT_DESKTOP" ] || [ -n "$DESKTOP_SESSION" ]; then
         log_message "Window manager is installed"
+        WINDOW_MANAGER=true
         return 0
     else
         log_message "No window manager detected"
+        WINDOW_MANAGER=false
         return 1
     fi
 }
@@ -96,11 +102,8 @@ installFlatpacks() {
     flatpak install -y ${flatpaks[@]}
 }
 
-installGoogleChrome() {
+installGoogleChromeDeb() {
     log_message "Installing Google Chrome"
-    # Check if the OS is Ubuntu
-    if [ -f /etc/debian_version ]; then
-        # Check if Google Chrome is installed
         if ! dpkg -s google-chrome-stable >/dev/null 2>&1; then
             # Install Google Chrome
             echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
@@ -111,9 +114,44 @@ installGoogleChrome() {
         else
             echo "Google Chrome is already installed"
         fi
-    fi
 }
 
+installGoogleChromeRpm() {
+    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+    sudo dnf install google-chrome-stable -y
+}
+
+installGoogleChromeFlatpak() {
+    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+    flatpak install flathub com.google.Chrome -y
+    flatpak override --user --filesystem=~/.local/share/applications --filesystem=~/.local/share/icons com.google.Chrome
+
+}
+
+
+installVSCodeRPM()
+{
+        #Install VSCode
+    echo -e "\e[32mInstalling Visual Studio Code\e[0m"  # Echo in green color
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+    dnf check-update
+    sudo dnf install code -y
+}
+
+installVSCodeDeb(){
+    echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
+    sudo apt -y install wget gpg
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+    sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+    echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" |sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
+    rm -f packages.microsoft.gpg
+    sudo apt install apt-transport-https
+    sudo apt update
+    sudo apt install -y code # or code-insiders
+
+
+}
 
 ####OS Specific Functions####
 installDebian() {    
@@ -126,12 +164,6 @@ installDebian() {
     # Install Standard Packages
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
     sudo apt install toilet fortune lolcat vim nano curl htop gh nfs-common gnome-firmware borgbackup -y
-
-    # Set DNS Settings
-    if [[ $(hostname -I) =~ 192\.168\.12\.[0-9]+ ]] && [[ $(hostname -I) != "192.168.12.234" ]]; then
-        echo "Setting DNS to 192.168.12.234"
-        echo "nameserver 192.168.12.234" | sudo tee /etc/resolv.conf > /dev/null
-    fi
 
     # Check if a window manager is installed
     if check_window_manager; then
@@ -166,8 +198,7 @@ installDebian() {
 }
 
 installFedora() {
-    log_message "Performing system upgrade... This may take a while..."
-    
+
     # Set DNF Parallel Downloads
     sudo cp "/etc/dnf/dnf.conf" "/etc/dnf/dnf.conf.bak"
     echo "max_parallel_downloads=10" | sudo tee -a /etc/dnf/dnf.conf > /dev/null
@@ -219,42 +250,43 @@ fi
 # Check if the OS is Debian-based
 if [ -f /etc/debian_version ]; then
     installDebian
+
+    if $Window_Manager; then
+        if $FLATPAK_INSTALLED; then
+            #Install Google Chrome
+            installGoogleChromeFlatpak
+        else
+            installGoogleChromeDeb
+        fi
+        #Install Visual Studio Code
+        installVSCodeDeb
+    fi
 fi
 
 # Check if the OS is Fedora
 if [ -f /etc/redhat-release ]; then
     installFedora
-   
-    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
-        #Install Google Chrome
-        if command -v flatpak >/dev/null 2>&1; then
-            echo -e "\e[32mInstalling Google Chrome via Flatpak\e[0m"  # Echo in green color
-            flatpak install -y com.google.Chrome
-            flatpak override --user --filesystem=~/.local/share/applications --filesystem=~/.local/share/icons com.google.Chrome
-        else
-            echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
-            sudo dnf install google-chrome-stable -y
-        fi
- 
 
-    #Install VSCode
-    echo -e "\e[32mInstalling Visual Studio Code\e[0m"  # Echo in green color
-    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
-    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
-    dnf check-update
-    sudo dnf install code -y
+    if $Window_Manager; then
+        if $FLATPAK_INSTALLED; then
+            #Install Google Chrome
+            installGoogleChromeFlatpak
+        else
+            installGoogleChromeRpm
+        fi
+    #Install Visual Studio Code
+    installVSCodeRPM
     fi
 fi
+ 
 
-# Install Flatpacks and Google Chrome
-if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+# Install Flatpacks
+if $Window_Manager; then
     # Install Flatpacks
     echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
+    installGoogleChromeFlatpak
     installFlatpacks
-
-    # Install Google Chrome
-    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
-    installGoogleChrome
+    
 fi
 
 # Install Docker
@@ -274,6 +306,20 @@ read -p "Do you want to install Tailscale? (y/n): " install_tailscale
 if [ "$install_tailscale" = "y" ]; then
     curl -fsSL https://tailscale.com/install.sh | sh
 fi
+
+#Install Steam
+read -p "Do you want to install Steam? (y/n): " install_steam
+if [ "$install_steam" = "y" ]; then
+    if $FLATPAK_INSTALLED; then
+        flatpak install flathub com.valvesoftware.Steam -y
+    elif [ -f /etc/debian_version ]; then
+        sudo apt install steam -y
+    elif [ -f /etc/redhat-release ]; then
+        sudo dnf install steam -y
+    fi
+fi
+
+
 
 # Create SSH Keys
 echo "Creating SSH Keys"
