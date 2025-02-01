@@ -153,6 +153,70 @@ installVSCodeDeb(){
 
 }
 
+installPowershell()
+{
+    # Install PowerShell
+    log_message "Installing PowerShell"
+    if ! command -v pwsh >/dev/null 2>&1; then
+        # Install PowerShell
+        echo -e "\e[32mInstalling PowerShell\e[0m"  # Echo in green color
+        if [ -f /etc/debian_version ]; then
+            # Install PowerShell for Debian-based systems
+            # Update the list of packages
+            sudo apt update
+
+            # Install pre-requisite packages.
+            sudo apt install -y wget
+
+            # Get the version of Debian
+            source /etc/os-release
+
+            # Download the Microsoft repository GPG keys
+            wget -q https://packages.microsoft.com/config/debian/$VERSION_ID/packages-microsoft-prod.deb
+
+            # Register the Microsoft repository GPG keys
+            sudo dpkg -i packages-microsoft-prod.deb
+
+            # Delete the Microsoft repository GPG keys file
+            rm packages-microsoft-prod.deb
+
+            # Update the list of packages after we added packages.microsoft.com
+            sudo apt update
+
+            ###################################
+            # Install PowerShell
+            sudo apt install -y powershell
+
+        elif [ -f /etc/redhat-release ]; then
+            # Install PowerShell for Fedora
+            # Get version of RHEL
+            source /etc/os-release
+            if [ ${VERSION_ID%.*} -lt 8 ]
+            then majorver=7
+            elif [ ${VERSION_ID%.*} -lt 9 ]
+            then majorver=8
+            else majorver=9
+            fi
+
+            # Download the Microsoft RedHat repository package
+            curl -sSL -O https://packages.microsoft.com/config/rhel/$majorver/packages-microsoft-prod.rpm
+
+            # Register the Microsoft RedHat repository
+            sudo rpm -i packages-microsoft-prod.rpm
+
+            # Delete the downloaded package after installing
+            rm packages-microsoft-prod.rpm
+
+            # Update package index files
+            sudo dnf update
+            # Install PowerShell
+            sudo dnf install powershell -y
+        fi
+    else
+        echo "PowerShell is already installed"
+    fi
+}
+
 ####OS Specific Functions####
 installDebian() {    
     log_message "Performing system upgrade... This may take a while..."
@@ -319,7 +383,11 @@ if [ "$install_steam" = "y" ]; then
     fi
 fi
 
-
+#Install Powershell
+read -p "Do you want to install PowerShell? (y/n): " install_powershell
+if [ "$install_powershell" = "y" ]; then
+    installPowershell
+fi
 
 # Create SSH Keys
 echo "Creating SSH Keys"
