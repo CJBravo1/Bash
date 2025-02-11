@@ -296,6 +296,8 @@ installFedora() {
 }
 
 #####START OF SCRIPT#####
+check_window_manager
+
 # Clone the Bash Scripts repository
 if ! command -v git >/dev/null 2>&1; then
     echo "git is not installed. Please install git and rerun the script."
