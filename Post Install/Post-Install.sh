@@ -18,7 +18,7 @@ get_timestamp() {
     date +"%Y-%m-%d %H:%M:%S"
 }
 
-check_window_manager() {
+check_WINDOW_MANAGER() {
     if [ -n "$XDG_CURRENT_DESKTOP" ] || [ -n "$DESKTOP_SESSION" ]; then
         log_message "Window manager is installed"
         WINDOW_MANAGER=true
@@ -230,7 +230,7 @@ installDebian() {
     sudo apt install toilet fortune lolcat vim nano curl htop gh nfs-common gnome-firmware borgbackup -y
 
     # Check if a window manager is installed
-    if check_window_manager; then
+    if check_WINDOW_MANAGER; then
         # Check if Flatpak is installed
         if ! command -v flatpak >/dev/null 2>&1; then
             # Install Flatpak
@@ -296,7 +296,7 @@ installFedora() {
 }
 
 #####START OF SCRIPT#####
-check_window_manager
+check_WINDOW_MANAGER
 
 # Clone the Bash Scripts repository
 if ! command -v git >/dev/null 2>&1; then
@@ -317,7 +317,7 @@ fi
 if [ -f /etc/debian_version ]; then
     installDebian
 
-    if $Window_Manager; then
+    if $WINDOW_MANAGER; then
         if $FLATPAK_INSTALLED; then
             #Install Google Chrome
             installGoogleChromeFlatpak
@@ -333,7 +333,7 @@ fi
 if [ -f /etc/redhat-release ]; then
     installFedora
 
-    if $Window_Manager; then
+    if $WINDOW_MANAGER; then
         if $FLATPAK_INSTALLED; then
             #Install Google Chrome
             installGoogleChromeFlatpak
@@ -347,7 +347,7 @@ fi
  
 
 # Install Flatpacks
-if $Window_Manager; then
+if $WINDOW_MANAGER; then
     # Install Flatpacks
     echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
     installGoogleChromeFlatpak
