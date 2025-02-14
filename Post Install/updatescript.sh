@@ -21,19 +21,47 @@ function update_system {
         echo "flatpak is installed, running updates..."
         flatpak upgrade -y
     fi
+    #gh updates
+    if command -v gh &> /dev/null; then
+        echo "gh is installed, running updates..."
+        gh extension upgrade --all
+    fi
+}
+function update_githubRepositories {
+    #Update bash git repositories
+    if [ -d "$HOME/Scripts/bash" ]; then
+        echo -e "\e[32mUpdating bash git repository\e[0m"
+        git -C "$HOME/Scripts/bash" pull
+    fi
+
+    #Update PowerShell git repositories
+    if [ -d "$HOME/Scripts/PSScripts" ]; then
+        echo -e "\e[32mUpdating PSScripts git repository\e[0m"
+        git -C "$HOME/Scripts/PSScripts" pull
+    fi
 }
 
 
 function update_rclone {
-    #Sync Google Photos to OneDrive -- This is now being done by Deepthought
+    #Copy Google Photos to OneDrive -- This is now being done by Deepthought
     echo -e "\e[32mSyncing Google Photos to OneDrive\e[0m"
     echo ""
     rclone copy GooglePhotos:album/ OneDrive:Pictures/ --progress
+    
+    #Copy Google Photos Shared Albums to OneDrive
+    echo -e "\e[32mSyncing Google Photos Shared Albums to OneDrive\e[0m"
+    echo ""
+    #rclone copy GooglePhotos:shared-album/ OneDrive:Pictures/ --exclude '*/\{**' --progress
 
     #Sync Google Photos to Pictures
-    echo -e "\e[32mSyncing Google Photos to Pictures\e[0m"
-    echo ""
+    #echo -e "\e[32mSyncing Google Photos to Pictures\e[0m"
+    #echo ""
     rclone copy GooglePhotos:album/ $HOME/Pictures --progress
+
+    #Sync Google Photos Shared Albums to Pictures
+    #echo -e "\e[32mSyncing Google Photos Shared Albums to Pictures\e[0m"
+    #echo ""
+    #rclone copy GooglePhotos:shared-album/ $HOME/Pictures --exclude '*/\{ABZ9**' --progress
 }
 
 #Config Backup
@@ -89,6 +117,7 @@ done
 if [[ -z "$1" ]]; then
     echo "No options specified. Running all functions."
     update_system
+    update_githubRepositories
     update_rclone
     dropbox_backup
     config_backup
@@ -97,6 +126,7 @@ fi
 if [ "$reboot" = true ]; then
     echo "Rebooting after updates and syncs."
     update_system
+    update_githubRepositories
     update_rclone
     dropbox_backup
     config_backup
@@ -107,6 +137,7 @@ fi
 if [ "$poweroff" = true ]; then
     echo "Powering off after updates and syncs."
     update_system
+    update_githubRepositories
     update_rclone
     dropbox_backup
     config_backup
