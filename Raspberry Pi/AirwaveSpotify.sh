@@ -1,27 +1,27 @@
 #!/bin/bash
 
-#Install Shairport (AirPlay)
-sudo apt update && sudo apt install autoconf automake avahi-daemon build-essential git libasound2-dev libavahi-client-dev libconfig-dev libdaemon-dev libpopt-dev libssl-dev libtool xmltoman
-git clone https://github.com/mikebrady/shairport-sync.git
-cd shairport-sync
-autoreconf -i -f
-./configure --with-alsa --with-avahi --with-ssl=openssl --with-systemd --with-metadata
-make
-sudo make install
+install_shairport() {
+    #Install Shairport (AirPlay)
+    sudo apt update && sudo apt install autoconf automake avahi-daemon build-essential git libasound2-dev libavahi-client-dev libconfig-dev libdaemon-dev libpopt-dev libssl-dev libtool xmltoman
+    git clone https://github.com/mikebrady/shairport-sync.git
+    cd shairport-sync
+    autoreconf -i -f
+    ./configure --with-alsa --with-avahi --with-ssl=openssl --with-systemd --with-metadata
+    make
+    sudo make install
+}
 
-cd
+install_raspotify() {
+    #Install Raspotify (Spotify Connect)
+    sudo apt install -y apt-transport-https curl
+    curl -sSL https://dtcooper.github.io/raspotify/key.asc | sudo apt-key add -v -
+    echo 'deb https://dtcooper.github.io/raspotify raspotify main' | sudo tee /etc/apt/sources.list.d/raspotify.list
+    sudo apt update
+    sudo apt install raspotify
+}
 
-#Install Raspotify (Spotify Connect)
-sudo apt install -y apt-transport-https curl
-curl -sSL https://dtcooper.github.io/raspotify/key.asc | sudo apt-key add -v -
-echo 'deb https://dtcooper.github.io/raspotify raspotify main' | sudo tee /etc/apt/sources.list.d/raspotify.list
-sudo apt update
-sudo apt install raspotify
-
-cd
-
-#Install Bluetooth Audio ALSA Backend (bluez-alsa-utils)
-# Bluetooth Audio ALSA Backend (bluez-alsa-utils)
+install_bluetooth_audio() {
+    #Install Bluetooth Audio ALSA Backend (bluez-alsa-utils)
     sudo apt update
     sudo apt install -y --no-install-recommends bluez-tools bluez-alsa-utils
 
@@ -83,3 +83,9 @@ SUBSYSTEM=="input", GROUP="input", MODE="0660"
 KERNEL=="input[0-9]*", RUN+="/usr/local/bin/bluetooth-udev"
 EOF
 }
+
+install_shairport
+cd
+install_raspotify
+cd
+install_bluetooth_audio
