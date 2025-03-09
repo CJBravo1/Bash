@@ -49,12 +49,12 @@ function update_rclone {
     rclone copy GooglePhotos:album/ OneDrive:Pictures/ --progress
     
     #Copy Google Photos Shared Albums to OneDrive
-    echo -e "\e[32mSyncing Google Photos Shared Albums to OneDrive\e[0m"
+    #echo -e "\e[32mSyncing Google Photos Shared Albums to OneDrive\e[0m"
     echo ""
     #rclone copy GooglePhotos:shared-album/ OneDrive:Pictures/ --exclude '*/\{**' --progress
 
     #Sync Google Photos to Pictures
-    #echo -e "\e[32mSyncing Google Photos to Pictures\e[0m"
+    echo -e "\e[32mSyncing Google Photos to Pictures\e[0m"
     #echo ""
     rclone copy GooglePhotos:album/ $HOME/Pictures --progress
 
