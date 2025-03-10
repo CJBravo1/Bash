@@ -41,6 +41,24 @@ function update_githubRepositories {
     fi
 }
 
+function update_functions {
+    # Add the contents of .bash_functions from the URL to .bash_functions if not already there
+    bash_functions_file="$HOME/Scripts/bash/Post Install/.bash_functions"
+    declare -A files=(
+        ["$HOME/Scripts/bash/Post Install/.bash_functions"]="https://raw.githubusercontent.com/CJBravo1/Bash/refs/heads/master/Post%20Install/.bash_functions"
+        ["$HOME/Scripts/bash/Post Install/.bash_aliases"]="https://raw.githubusercontent.com/CJBravo1/Bash/refs/heads/master/Post%20Install/.bash_aliases"
+    )
+
+    for file in "${!files[@]}"; do
+        url="${files[$file]}"
+        if ! grep -qF "$(curl -s "$url")" "$file"; then
+            echo -e "\e[32mAdding contents from $url to $file\e[0m"
+            curl -s "$url" >> "$file"
+        else
+            echo -e "\e[32mContents from $url already present in $file\e[0m"
+        fi
+    done
+}
 
 function update_rclone {
     #Copy Google Photos to OneDrive -- This is now being done by Deepthought
@@ -82,29 +100,37 @@ function config_backup {
 
 # If no options are specified, run all functions
 
+function run_all_tasks {
+    update_system
+    update_githubRepositories
+    update_rclone
+    dropbox_backup
+    config_backup
+}
+
 for option in "$@"; do
     case $option in
-        -poweroff)
+        --poweroff)
             echo "System will power off after updates and syncs."
             poweroff=true
             ;;
-        -reboot)
+        --reboot)
             echo "System will reboot after updates and syncs."
             reboot=true
             ;;
-        -update)
+        --update)
             echo "Running system update."
             update_system
             ;;
-        -rclone)
+        --rclone)
             echo "Running rclone sync."
             update_rclone
             ;;
-        -dropbox)
+        --dropbox)
             echo "Running Dropbox backup."
             dropbox_backup
             ;;
-        -config)
+        --config)
             echo "Running config backup."
             config_backup
             ;;
@@ -116,30 +142,17 @@ done
 
 if [[ -z "$1" ]]; then
     echo "No options specified. Running all functions."
-    update_system
-    update_githubRepositories
-    update_rclone
-    dropbox_backup
-    config_backup
+    run_all_tasks
 fi
 
 if [ "$reboot" = true ]; then
     echo "Rebooting after updates and syncs."
-    update_system
-    update_githubRepositories
-    update_rclone
-    dropbox_backup
-    config_backup
+    run_all_tasks
     sudo reboot
 fi
 
-
 if [ "$poweroff" = true ]; then
     echo "Powering off after updates and syncs."
-    update_system
-    update_githubRepositories
-    update_rclone
-    dropbox_backup
-    config_backup
+    run_all_tasks
     sudo poweroff
 fi
