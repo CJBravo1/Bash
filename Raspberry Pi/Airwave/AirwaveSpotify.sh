@@ -85,9 +85,19 @@ EOF
 }
 
 add_functions() {
+    # Add aliases and functions from external files
+    for file in bash_aliases bash_functions; do
+        url="https://raw.githubusercontent.com/CJBravo1/Bash/refs/heads/master/Raspberry%20Pi/Airwave/$file"
+        local_file="$HOME/.$file"
+        if ! grep -q "$(curl -sSL $url)" $local_file; then
+            echo -e "\e[32mAdding Aliases to .bash_aliases\e[0m"
+            echo -e "\e[32mAdding Functions to .bash_functions\e[0m"
+            curl -sSL $url -o $local_file
+        fi
+    done
 
-
-
+    source ~/.bash_functions
+    source ~/.bash_aliases
 }
 
 
@@ -96,4 +106,5 @@ cd
 install_raspotify
 cd
 install_bluetooth_audio
-add_aliases
+
+add_functions
