@@ -1,0 +1,26 @@
+restart_services() {
+    case $1 in
+        shairport)
+            echo "Restarting Shairport Service"
+            sudo systemctl restart shairport-sync.service
+            ;;
+        spotify)
+            echo "Restarting Spotify Service"
+            sudo systemctl restart raspotify.service
+            ;;
+        bluetooth)
+            echo "Restarting Bluetooth Service"
+            sudo systemctl restart bluetooth.service
+            ;;
+        all)
+            echo "Restarting all services"
+            sudo systemctl restart shairport-sync.service
+            sudo systemctl restart raspotify.service
+            sudo systemctl restart bluetooth.service
+            ;;
+        *)
+            echo "Usage: restart_services {shairport|spotify|bluetooth|all}"
+            return 1
+            ;;
+    esac
+}

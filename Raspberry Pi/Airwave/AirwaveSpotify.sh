@@ -84,8 +84,16 @@ KERNEL=="input[0-9]*", RUN+="/usr/local/bin/bluetooth-udev"
 EOF
 }
 
+add_functions() {
+
+
+
+}
+
+
 install_shairport
 cd
 install_raspotify
 cd
 install_bluetooth_audio
+add_aliases

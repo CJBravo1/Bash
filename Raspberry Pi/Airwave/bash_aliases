@@ -1,0 +1,8 @@
+#Shairport Service
+alias restartShairport='echo "Restarting Shairport Service" && sudo systemctl restart shairport-sync.service'
+
+#Spotify Services
+alias restartSpotify='echo "Restarting Spotify Service" && sudo systemctl restart raspotify.service'
+
+#Bluetooth Service
+alias restartBluetooth='echo "Restart Bluetooth Service" && sudo systemctl restart bluetooth.service'
