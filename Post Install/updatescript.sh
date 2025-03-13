@@ -148,6 +148,12 @@ fi
 if [ "$reboot" = true ]; then
     echo "Rebooting after updates and syncs."
     run_all_tasks
+    if command -v gnome-session-quit &> /dev/null; then
+        gnome-session-quit --reboot
+    else
+        sudo reboot
+    fi
+fi
     sudo reboot
 fi
 
