@@ -108,3 +108,6 @@ cd
 install_bluetooth_audio
 
 add_functions
+
+#Cleanup
+sudo apt autoremove -y
