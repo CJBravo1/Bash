@@ -2,7 +2,6 @@
 #Run Updates
 poweroff=false
 reboot=false
-backupDirectory="$HOME/Dropbox/Linux Config/$HOSTNAME"
 
 #Update System
 function update_system {
@@ -104,7 +103,6 @@ function run_all_tasks {
     update_system
     update_githubRepositories
     update_rclone
-    dropbox_backup
     config_backup
 }
 
@@ -125,10 +123,6 @@ for option in "$@"; do
         --rclone)
             echo "Running rclone sync."
             update_rclone
-            ;;
-        --dropbox)
-            echo "Running Dropbox backup."
-            dropbox_backup
             ;;
         --config)
             echo "Running config backup."
@@ -154,11 +148,10 @@ if [ "$reboot" = true ]; then
         sudo reboot
     fi
 fi
-    sudo reboot
-fi
 
 if [ "$poweroff" = true ]; then
     echo "Powering off after updates and syncs."
     run_all_tasks
     sudo poweroff
 fi
+
