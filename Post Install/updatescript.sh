@@ -152,6 +152,9 @@ fi
 if [ "$poweroff" = true ]; then
     echo "Powering off after updates and syncs."
     run_all_tasks
+    if command -v gnome-session-quit &> /dev/null; then
+        gnome-session-quit --power-off
+    else
     sudo poweroff
 fi
 
