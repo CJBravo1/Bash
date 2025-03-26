@@ -2,6 +2,7 @@
 #Run Updates
 poweroff=false
 reboot=false
+backupDirectory="$HOME/.Backup"
 
 #Update System
 function update_system {
@@ -102,7 +103,9 @@ function config_backup {
 function run_all_tasks {
     update_system
     update_githubRepositories
-    update_rclone
+    if command -v rclone &> /dev/null; then
+        update_rclone
+    fi
     config_backup
 }
 
