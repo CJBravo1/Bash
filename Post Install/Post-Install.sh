@@ -293,6 +293,13 @@ installFedora() {
     sudo fwupdmgr refresh --force
     sudo fwupdmgr get-updates
     sudo fwupdmgr update -y
+
+    # Check if the OS is running as a virtual machine
+    if grep -qE "(vmware|virtualbox|qemu|kvm|xen|hyper-v)" /proc/cpuinfo || systemd-detect-virt -q; then
+        sudo plymouth-set-default-theme tribar -R
+    else
+        log_message "Not running inside a virtual machine."
+    fi
 }
 
 #####START OF SCRIPT#####
