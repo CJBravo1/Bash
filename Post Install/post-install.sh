@@ -54,6 +54,14 @@ backup_file() {
     fi
 }
 
+five_second_countdown() {
+    echo "Rebooting in 5 seconds..."
+    for i in {5..1}; do
+        echo "$i"
+        sleep 1
+    done
+}
+
 addGreetings() {
 #Copy bash_aliases and bash_functions
 echo -e "\e[32mAdding Bash functions and aliases\e[0m"
@@ -321,7 +329,17 @@ installSilverblue() {
 
     # Remove unwanted packages
     echo "Removing unwanted packages"
-    rpm-ostree override remove firefox libreoffice
+    if rpm -q firefox >/dev/null 2>&1; then
+        rpm-ostree override remove firefox
+    else
+        echo "Firefox is not installed"
+    fi
+
+    if rpm -q libreoffice >/dev/null 2>&1; then
+        rpm-ostree override remove libreoffice
+    else
+        echo "LibreOffice is not installed"
+    fi
 
     # Check for firmware updates
     log_message "Checking for firmware updates..."
@@ -338,7 +356,12 @@ installSilverblue() {
 
     # Apply pending changes and reboot
     echo "Applying changes and rebooting..."
-    sudo rpm-ostree finalize && sudo systemctl reboot
+    sudo rpm-ostree finalize 
+    sudo rpm-ostree cleanup -m
+    
+    #Reboot the system
+    five_second_countdown
+    sudo systemctl reboot
 }
 
 
