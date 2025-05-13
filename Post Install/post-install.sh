@@ -358,10 +358,6 @@ installSilverblue() {
     echo "Applying changes and rebooting..."
     sudo rpm-ostree finalize 
     sudo rpm-ostree cleanup -m
-    
-    #Reboot the system
-    five_second_countdown
-    sudo systemctl reboot
 }
 
 
@@ -416,7 +412,7 @@ if [ -f /etc/redhat-release ]; then
 fi
  
 # Check if the OS is Silverblue
-if [ -f /etc/os-release ]; then
+if [ -f /etc/os-release ] && grep -qE "Silverblue|Kinoite" /etc/os-release; then
     if grep -q "Fedora" /etc/os-release; then
         installSilverblue
         if $WINDOW_MANAGER; then
