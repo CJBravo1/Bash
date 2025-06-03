@@ -89,13 +89,14 @@ installGhCopilot() {
 installFlatpacks() {
     log_message "Installing Flatpaks"
     flatpaks=(
-        app.drey.Damask
+        #app.drey.Damask
         com.dropbox.Client
         com.github.tchx84.Flatseal
         com.mattjakeman.ExtensionManager
         com.spotify.Client
         com.transmissionbt.Transmission
         #org.raspberrypi.rpi-imager
+        io.github.davidoc26.wallpaper_selector
         io.github.realmazharhussain.GdmSettings
         io.github.sigmasd.stimulator
         io.missioncenter.MissionCenter
@@ -311,6 +312,7 @@ installFedora() {
     fi
 }
 
+#Auto Enroll LUKS key into TPM
 enroll_luks_tpm() {
     echo "Detecting LUKS-encrypted partition..."
     LUKS_DEVICE=$(lsblk -o NAME,TYPE,FSTYPE | awk '$2=="crypt"{print "/dev/" $1}')
