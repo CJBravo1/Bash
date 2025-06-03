@@ -54,6 +54,14 @@ backup_file() {
     fi
 }
 
+five_second_countdown() {
+    echo "Rebooting in 5 seconds..."
+    for i in {5..1}; do
+        echo "$i"
+        sleep 1
+    done
+}
+
 addGreetings() {
 #Copy bash_aliases and bash_functions
 echo -e "\e[32mAdding Bash functions and aliases\e[0m"
@@ -302,6 +310,57 @@ installFedora() {
     fi
 }
 
+installSilverblue() {
+    # Set rpm-ostree parallel downloads
+    sudo cp "/etc/rpm-ostree.conf" "/etc/rpm-ostree.conf.bak"
+    echo "max_parallel_downloads=10" | sudo tee -a /etc/rpm-ostree.conf > /dev/null
+
+    # Enable RPM Fusion repositories for Silverblue
+    rpm-ostree install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+    rpm-ostree install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+
+    # Update the system
+    echo "Running: rpm-ostree upgrade"
+    sudo rpm-ostree upgrade
+
+    # Install Standard Packages
+    echo "Running: Standard Package Installs"
+    rpm-ostree install toilet borgbackup fortune-mod lolcat vim nano htop gh pv fastfetch gnome-firmware rclone mscore-fonts-all
+
+    # Remove unwanted packages
+    echo "Removing unwanted packages"
+    if rpm -q firefox >/dev/null 2>&1; then
+        rpm-ostree override remove firefox
+    else
+        echo "Firefox is not installed"
+    fi
+
+    if rpm -q libreoffice >/dev/null 2>&1; then
+        rpm-ostree override remove libreoffice
+    else
+        echo "LibreOffice is not installed"
+    fi
+
+    # Check for firmware updates
+    log_message "Checking for firmware updates..."
+    sudo fwupdmgr refresh --force
+    sudo fwupdmgr get-updates
+    sudo fwupdmgr update -y
+
+    # Check if the OS is running as a virtual machine
+    if grep -qE "(vmware|virtualbox|qemu|kvm|xen|hyper-v)" /proc/cpuinfo || systemd-detect-virt -q; then
+        sudo plymouth-set-default-theme tribar -R
+    else
+        log_message "Not running inside a virtual machine."
+    fi
+
+    # Apply pending changes and reboot
+    echo "Applying changes and rebooting..."
+    sudo rpm-ostree finalize 
+    sudo rpm-ostree cleanup -m
+}
+
+
 #####START OF SCRIPT#####
 check_WINDOW_MANAGER
 
@@ -352,6 +411,16 @@ if [ -f /etc/redhat-release ]; then
     fi
 fi
  
+# Check if the OS is Silverblue
+if [ -f /etc/os-release ] && grep -qE "Silverblue|Kinoite" /etc/os-release; then
+    if grep -q "Fedora" /etc/os-release; then
+        installSilverblue
+        if $WINDOW_MANAGER; then
+            #Install Google Chrome
+            installGoogleChromeFlatpak
+        fi
+    fi
+fi
 
 # Install Flatpacks
 if $WINDOW_MANAGER; then
