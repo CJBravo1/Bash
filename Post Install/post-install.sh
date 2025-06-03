@@ -269,6 +269,7 @@ installDebian() {
     
 }
 
+###Redhat###
 installFedora() {
 
     # Set DNF Parallel Downloads
@@ -309,6 +310,49 @@ installFedora() {
         log_message "Not running inside a virtual machine."
     fi
 }
+
+enroll_luks_tpm() {
+    echo "Detecting LUKS-encrypted partition..."
+    LUKS_DEVICE=$(lsblk -o NAME,TYPE,FSTYPE | awk '$2=="crypt"{print "/dev/" $1}')
+    
+    if [[ -z "$LUKS_DEVICE" ]]; then
+        echo "No LUKS-encrypted partition detected. Exiting."
+        return 1
+    fi
+    
+    echo "Found LUKS-encrypted partition: $LUKS_DEVICE"
+    
+    echo "Enrolling LUKS key into TPM..."
+    sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+2+4+7 "$LUKS_DEVICE"
+    
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to enroll LUKS key into TPM. Exiting."
+        return 1
+    fi
+
+    UUID=$(blkid -s UUID -o value "$LUKS_DEVICE")
+    
+    if [[ -z "$UUID" ]]; then
+        echo "Failed to retrieve UUID. Exiting."
+        return 1
+    fi
+    
+    echo "Updating /etc/crypttab..."
+    CRYPTTAB_ENTRY="luks-${UUID} UUID=${UUID} none luks,tpm2-device=auto"
+    
+    if grep -q "$UUID" /etc/crypttab; then
+        echo "Entry already exists in /etc/crypttab."
+    else
+        echo "$CRYPTTAB_ENTRY" | sudo tee -a /etc/crypttab
+        echo "Added entry: $CRYPTTAB_ENTRY"
+    fi
+
+    echo "Regenerating initramfs..."
+    sudo dracut --force --regenerate-all
+
+    echo "TPM-based unlocking setup complete! Reboot to test."
+}
+
 
 installSilverblue() {
     # Set rpm-ostree parallel downloads
