@@ -237,6 +237,43 @@ installPowershell()
     fi
 }
 
+### Customize Gnome ###
+
+customizeGnome() {
+    log_message "Customizing GNOME settings"
+
+    # Ensure dependencies
+    if ! command -v curl >/dev/null 2>&1; then
+        sudo apt install -y curl
+    fi
+
+    # Install gnome-shell-extension-installer if not present
+    if ! command -v gnome-shell-extension-installer >/dev/null 2>&1; then
+        sudo curl -o /usr/local/bin/gnome-shell-extension-installer \
+            https://raw.githubusercontent.com/brunelli/gnome-shell-extension-installer/master/gnome-shell-extension-installer
+        sudo chmod +x /usr/local/bin/gnome-shell-extension-installer
+    fi
+
+    # List of GNOME extension UUIDs
+    extensions=(
+        dash-to-dock@micxgx.gmail.com
+        notification-banner-reloaded@marcinjakubowski.github.com
+        blur-my-shell@aunetx
+        username-in-topbar@neroteam.com
+        tailscale@joaophi.github.com
+        compiz-alike-magic-lamp-effect@hermes83.github.com
+        quick-settings-audio-panel@rayzeq.github.io
+    )
+
+    for uuid in "${extensions[@]}"; do
+        echo "Installing GNOME extension: $uuid"
+        gnome-shell-extension-installer --yes "$uuid"
+        gnome-extensions enable "$uuid"
+    done
+
+}
+
+
 ####OS Specific Functions####
 installDebian() {    
     log_message "Performing system upgrade... This may take a while..."
@@ -496,7 +533,7 @@ fi
 if $WINDOW_MANAGER; then
     # Install Flatpacks
     echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
-    installGoogleChromeFlatpak
+    #installGoogleChromeFlatpak
     installFlatpacks
     
 fi
