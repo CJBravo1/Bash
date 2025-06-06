@@ -261,6 +261,15 @@ installDebian() {
         else
             echo "Flatpak is already installed"
         fi
+        if ! command -v flatpak >/dev/null 2>&1; then
+            # Install Flatpak
+            echo "Installing Flatpak"
+            sudo apt install flatpak -y
+            sudo apt update
+            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        else
+            echo "Flatpak is already installed"
+        fi
     else
         echo "No window manager detected, skipping Flatpak installation"
     fi
