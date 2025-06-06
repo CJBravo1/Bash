@@ -345,11 +345,7 @@ enroll_luks_tpm() {
   fi
 
   SET_PIN_ARG=""
-  read -p "Would you like to set a PIN? (y/N): " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    SET_PIN_ARG=" --tpm2-with-pin=yes "
-  fi
+  # Always proceed without setting a PIN
 
   # Specify Crypt Disk by-uuid
   CRYPT_DISK="/dev/disk/by-uuid/$DISK_UUID"
