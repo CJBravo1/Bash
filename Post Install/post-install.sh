@@ -22,10 +22,21 @@ check_WINDOW_MANAGER() {
     if [ -n "$XDG_CURRENT_DESKTOP" ] || [ -n "$DESKTOP_SESSION" ]; then
         log_message "Window manager is installed"
         WINDOW_MANAGER=true
+
+        # Check if GNOME is installed
+        if command -v gnome-shell >/dev/null 2>&1; then
+            log_message "GNOME is installed"
+            GNOME_INSTALLED=true
+        else
+            log_message "GNOME is not installed"
+            GNOME_INSTALLED=false
+        fi
+
         return 0
     else
         log_message "No window manager detected"
         WINDOW_MANAGER=false
+        GNOME_INSTALLED=false
         return 1
     fi
 }
