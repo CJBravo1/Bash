@@ -314,7 +314,6 @@ installFedora() {
 
 #Auto Enroll LUKS key into TPM
 enroll_luks_tpm() {
-  [ "$UID" -eq 0 ] || { echo "This script must be run as root."; exit 1;}
 
   ## Inspect Kernel Cmdline for rd.luks.uuid
   RD_LUKS_UUID="$(xargs -n1 -a /proc/cmdline | grep rd.luks.uuid | cut -d = -f 2)"
@@ -357,24 +356,37 @@ enroll_luks_tpm() {
     return 1
   fi
 
-if cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
+    if sudo cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
     KEYSLOT=$(cryptsetup luksDump "$CRYPT_DISK" | sed -n '/systemd-tpm2$/,/Keyslot:/p' | grep Keyslot|awk '{print $2}')
     echo "TPM2 already present in LUKS keyslot $KEYSLOT of $CRYPT_DISK. Automatically wiping it and re-enrolling."
-    systemd-cryptenroll --wipe-slot=tpm2 "$CRYPT_DISK"
+    sudo systemd-cryptenroll --wipe-slot=tpm2 "$CRYPT_DISK"
 fi
 
   ## Run crypt enroll
   echo -e "\e[32mEnrolling TPM2 unlock requires your existing LUKS2 unlock password\e[0m"
-  systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 $SET_PIN_ARG "$CRYPT_DISK"
+  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 "$CRYPT_DISK"
+# Regenerate initramfs and update GRUB to accept the new enrollment
+if command -v dracut >/dev/null 2>&1; then
+    sudo dracut --force
+    log_message "Regenerated initramfs with dracut."
+fi
+
+if command -v update-grub >/dev/null 2>&1; then
+    sudo update-grub
+    log_message "Updated GRUB bootloader."
+elif command -v grub2-mkconfig >/dev/null 2>&1; then
+    sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+    log_message "Updated GRUB2 bootloader."
+fi
 
   if lsinitrd 2>&1 | grep -q tpm2-tss > /dev/null; then
     ## add tpm2-tss to initramfs
     if rpm-ostree initramfs | grep tpm2 > /dev/null; then
       echo "TPM2 already present in rpm-ostree initramfs config."
-      rpm-ostree initramfs
+      sudo rpm-ostree initramfs
       echo -e "\e[33mRe-running initramfs to pickup changes above.\e[0m"
     fi
-    rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
+    sudo rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
   else
     ## initramfs already containts tpm2-tss
     echo -e "\e[33mTPM2 already present in initramfs.\e[0m"
@@ -528,7 +540,7 @@ fi
 #Install Steam
 read -p "Do you want to install Steam? (y/n): " install_steam
 if [ "$install_steam" = "y" ]; then
-    elif [ -f /etc/debian_version ]; then
+    if [ -f /etc/debian_version ]; then
         sudo apt install steam -y
     elif [ -f /etc/redhat-release ]; then
         sudo dnf install steam -y
