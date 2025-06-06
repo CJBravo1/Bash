@@ -552,6 +552,16 @@ if $WINDOW_MANAGER; then
     installFlatpacks
     
 fi
+# Enroll LUKS key into TPM
+read -p "Do you want to enroll LUKS key into TPM? (y/n): " enroll_tpm
+if [ "$enroll_tpm" = "y" ]; then
+    if command -v systemd-cryptenroll >/dev/null 2>&1; then
+        enroll_luks_tpm
+    else
+        echo "systemd-cryptenroll is not installed. Please install it and rerun the script."
+    fi
+fi
+
 
 # Install Docker
 read -p "Do you want to install Docker? (y/n): " install_docker
@@ -587,15 +597,6 @@ if [ "$install_powershell" = "y" ]; then
     installPowershell
 fi
 
-# Enroll LUKS key into TPM
-read -p "Do you want to enroll LUKS key into TPM? (y/n): " enroll_tpm
-if [ "$enroll_tpm" = "y" ]; then
-    if command -v systemd-cryptenroll >/dev/null 2>&1; then
-        enroll_luks_tpm
-    else
-        echo "systemd-cryptenroll is not installed. Please install it and rerun the script."
-    fi
-fi
 
 # Create SSH Keys
 echo "Creating SSH Keys"
