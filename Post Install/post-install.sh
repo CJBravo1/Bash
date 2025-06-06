@@ -277,7 +277,14 @@ installFedora() {
     sudo cp "/etc/dnf/dnf.conf" "/etc/dnf/dnf.conf.bak"
     echo "max_parallel_downloads=10" | sudo tee -a /etc/dnf/dnf.conf > /dev/null
     echo "fastestmirror=True" | sudo tee -a /etc/dnf/dnf.conf > /dev/null
-    dnf -y install dnf-plugins-core
+    sudo dnf -y install dnf-plugins-core
+    
+    if rpm -q firefox >/dev/null 2>&1; then
+        sudo dnf remove firefox -y
+    fi
+    if rpm -q libreoffice >/dev/null 2>&1; then
+        sudo dnf remove libreoffice -y
+    fi
 
     # Set DNF Default to Yes
     sudo sed -i 's/^#default_yes=default_no/default_yes=default_yes/' /etc/dnf/dnf.conf
@@ -311,7 +318,7 @@ installFedora() {
         toilet \
         vim \
         -y
-    sudo dnf remove firefox libreoffice -y
+
 
     # Check for firmware updates
     log_message "Checking for firmware updates..."
