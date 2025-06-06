@@ -314,45 +314,88 @@ installFedora() {
 
 #Auto Enroll LUKS key into TPM
 enroll_luks_tpm() {
-    echo "Detecting LUKS-encrypted partition..."
-    LUKS_DEVICE=$(lsblk -o NAME,TYPE,FSTYPE | awk '$2=="crypt"{print "/dev/" $1}')
-    
-    if [[ -z "$LUKS_DEVICE" ]]; then
-        echo "No LUKS-encrypted partition detected. Exiting."
-        return 1
-    fi
-    
-    echo "Found LUKS-encrypted partition: $LUKS_DEVICE"
-    
-    echo "Enrolling LUKS key into TPM..."
-    sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+2+4+7 "$LUKS_DEVICE"
-    
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to enroll LUKS key into TPM. Exiting."
-        return 1
-    fi
+  [ "$UID" -eq 0 ] || { echo "This script must be run as root."; exit 1;}
 
-    UUID=$(blkid -s UUID -o value "$LUKS_DEVICE")
-    
-    if [[ -z "$UUID" ]]; then
-        echo "Failed to retrieve UUID. Exiting."
-        return 1
-    fi
-    
-    echo "Updating /etc/crypttab..."
-    CRYPTTAB_ENTRY="luks-${UUID} UUID=${UUID} none luks,tpm2-device=auto"
-    
-    if grep -q "$UUID" /etc/crypttab; then
-        echo "Entry already exists in /etc/crypttab."
+  ## Inspect Kernel Cmdline for rd.luks.uuid
+  RD_LUKS_UUID="$(xargs -n1 -a /proc/cmdline | grep rd.luks.uuid | cut -d = -f 2)"
+
+  # Check to make sure cmdline rd.luks.uuid exists
+  if [[ -z ${RD_LUKS_UUID:-} ]]; then
+    printf "LUKS device not defined on Kernel Commandline.\n"
+    printf "This is not supported by this script.\n"
+    printf "Exiting...\n"
+    exit 1
+  fi
+
+  # Check to make sure that the specified cmdline uuid exists.
+  if ! grep -q "${RD_LUKS_UUID}" <<< "$(lsblk)" ; then
+    printf "LUKS device not listed in block devices.\n"
+    printf "Exiting...\n"
+    exit 1
+  fi
+
+  # Cut off the luks-
+  LUKS_PREFIX="luks-"
+  if grep -q ^${LUKS_PREFIX} <<< "${RD_LUKS_UUID}"; then
+    DISK_UUID=${RD_LUKS_UUID#"$LUKS_PREFIX"}
+  else
+    echo "LUKS UUID format mismatch."
+    echo "Exiting..."
+    exit 1
+  fi
+
+  SET_PIN_ARG=""
+  read -p "Would you like to set a PIN? (y/N): " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    SET_PIN_ARG=" --tpm2-with-pin=yes "
+  fi
+
+  # Specify Crypt Disk by-uuid
+  CRYPT_DISK="/dev/disk/by-uuid/$DISK_UUID"
+
+  # Check to make sure crypt disk exists
+  if [[ ! -L "$CRYPT_DISK" ]]; then
+    printf "LUKS device not listed in block devices.\n"
+    printf "Exiting...\n"
+    exit 1
+  fi
+
+  if cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
+    KEYSLOT=$(cryptsetup luksDump "$CRYPT_DISK" | sed -n '/systemd-tpm2$/,/Keyslot:/p' | grep Keyslot|awk '{print $2}')
+    echo "TPM2 already present in LUKS keyslot $KEYSLOT of $CRYPT_DISK."
+    read -p "Wipe it and re-enroll? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      systemd-cryptenroll --wipe-slot=tpm2 "$CRYPT_DISK"
     else
-        echo "$CRYPTTAB_ENTRY" | sudo tee -a /etc/crypttab
-        echo "Added entry: $CRYPTTAB_ENTRY"
+      echo
+      echo "Either clear the existing TPM2 keyslot before retrying, else choose 'y' next time."
+      echo "Exiting..."
+      [[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
     fi
+  fi
 
-    echo "Regenerating initramfs..."
-    sudo dracut --force --regenerate-all
+  ## Run crypt enroll
+  echo "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
+  systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 $SET_PIN_ARG "$CRYPT_DISK"
 
-    echo "TPM-based unlocking setup complete! Reboot to test."
+  if lsinitrd 2>&1 | grep -q tpm2-tss > /dev/null; then
+    ## add tpm2-tss to initramfs
+    if rpm-ostree initramfs | grep tpm2 > /dev/null; then
+      echo "TPM2 already present in rpm-ostree initramfs config."
+      rpm-ostree initramfs
+      echo "Re-running initramfs to pickup changes above."
+    fi
+    rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
+  else
+    ## initramfs already containts tpm2-tss
+    echo "TPM2 already present in initramfs."
+  fi
+
+  ## Now reboot
+  echo
+  echo "TPM2 LUKS auto-unlock configured. Reboot now."
 }
 
 
