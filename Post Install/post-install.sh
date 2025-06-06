@@ -387,6 +387,16 @@ fi
   ## Run crypt enroll
   echo -e "\e[32mEnrolling TPM2 unlock requires your existing LUKS2 unlock password\e[0m"
   sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 "$CRYPT_DISK"
+# Modify /etc/crypttab to include tpm2-device=auto for the relevant LUKS device
+CRYPTTAB_FILE="/etc/crypttab"
+sudo cp  "$CRYPTTAB_FILE" "$CRYPTTAB_FILE.bak"
+LUKS_NAME=$(lsblk -no NAME,UUID | grep "$DISK_UUID" | awk '{print $1}')
+if [ -n "$LUKS_NAME" ]; then
+    sudo sed -i "/$LUKS_NAME\|$DISK_UUID/ s/$/ ,tpm2-device=auto/" "$CRYPTTAB_FILE"
+    log_message "Added tpm2-device=auto to $CRYPTTAB_FILE for $LUKS_NAME"
+else
+    log_message "Could not find LUKS device name for UUID $DISK_UUID in lsblk output."
+fi
 # Regenerate initramfs and update GRUB to accept the new enrollment
 if command -v dracut >/dev/null 2>&1; then
     sudo dracut --force
