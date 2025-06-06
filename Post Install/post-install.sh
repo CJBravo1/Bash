@@ -528,8 +528,6 @@ fi
 #Install Steam
 read -p "Do you want to install Steam? (y/n): " install_steam
 if [ "$install_steam" = "y" ]; then
-    if $FLATPAK_INSTALLED; then
-        flatpak install flathub com.valvesoftware.Steam -y
     elif [ -f /etc/debian_version ]; then
         sudo apt install steam -y
     elif [ -f /etc/redhat-release ]; then
