@@ -324,14 +324,14 @@ enroll_luks_tpm() {
     printf "LUKS device not defined on Kernel Commandline.\n"
     printf "This is not supported by this script.\n"
     printf "Exiting...\n"
-    exit 1
+    return 1
   fi
 
   # Check to make sure that the specified cmdline uuid exists.
   if ! grep -q "${RD_LUKS_UUID}" <<< "$(lsblk)" ; then
     printf "LUKS device not listed in block devices.\n"
     printf "Exiting...\n"
-    exit 1
+    return 1
   fi
 
   # Cut off the luks-
@@ -339,9 +339,9 @@ enroll_luks_tpm() {
   if grep -q ^${LUKS_PREFIX} <<< "${RD_LUKS_UUID}"; then
     DISK_UUID=${RD_LUKS_UUID#"$LUKS_PREFIX"}
   else
-    echo "LUKS UUID format mismatch."
-    echo "Exiting..."
-    exit 1
+    echo -e "\e[31mLUKS UUID format mismatch.\e[0m"
+    echo -e "\e[31mExiting...\e[0m"
+    return 1
   fi
 
   SET_PIN_ARG=""
@@ -354,7 +354,7 @@ enroll_luks_tpm() {
   if [[ ! -L "$CRYPT_DISK" ]]; then
     printf "LUKS device not listed in block devices.\n"
     printf "Exiting...\n"
-    exit 1
+    return 1
   fi
 
 if cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
@@ -364,7 +364,7 @@ if cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
 fi
 
   ## Run crypt enroll
-  echo "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
+  echo -e "\e[32mEnrolling TPM2 unlock requires your existing LUKS2 unlock password\e[0m"
   systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 $SET_PIN_ARG "$CRYPT_DISK"
 
   if lsinitrd 2>&1 | grep -q tpm2-tss > /dev/null; then
@@ -372,17 +372,17 @@ fi
     if rpm-ostree initramfs | grep tpm2 > /dev/null; then
       echo "TPM2 already present in rpm-ostree initramfs config."
       rpm-ostree initramfs
-      echo "Re-running initramfs to pickup changes above."
+      echo -e "\e[33mRe-running initramfs to pickup changes above.\e[0m"
     fi
     rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
   else
     ## initramfs already containts tpm2-tss
-    echo "TPM2 already present in initramfs."
+    echo -e "\e[33mTPM2 already present in initramfs.\e[0m"
   fi
 
   ## Now reboot
   echo
-  echo "TPM2 LUKS auto-unlock configured. Reboot now."
+  echo -e "\e[32mTPM2 LUKS auto-unlock configured.\e[0m"
 }
 
 
