@@ -252,6 +252,10 @@ installDebian() {
     # Check if a window manager is installed
     if check_WINDOW_MANAGER; then
         # Check if Flatpak is installed
+        if $GNOME_INSTALLED; then
+            echo "GNOME detected, installing gnome-tweaks"
+            sudo apt install -y gnome-tweaks
+        fi
         if ! command -v flatpak >/dev/null 2>&1; then
             # Install Flatpak
             echo "Installing Flatpak"
