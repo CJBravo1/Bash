@@ -391,6 +391,8 @@ fi
 CRYPTTAB_FILE="/etc/crypttab"
 sudo cp  "$CRYPTTAB_FILE" "$CRYPTTAB_FILE.bak"
 LUKS_NAME=$(lsblk -no NAME,UUID | grep "$DISK_UUID" | awk '{print $1}')
+
+
 if [ -n "$LUKS_NAME" ]; then
     sudo sed -i "/$LUKS_NAME\|$DISK_UUID/ s/$/ ,tpm2-device=auto/" "$CRYPTTAB_FILE"
     log_message "Added tpm2-device=auto to $CRYPTTAB_FILE for $LUKS_NAME"
