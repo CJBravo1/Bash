@@ -538,6 +538,11 @@ if $WINDOW_MANAGER; then
     
 fi
 
+#Customize Gnome Desktop
+if $GNOME_INSTALLED; then
+    customizeGnome
+fi
+
 # Install Docker
 read -p "Do you want to install Docker? (y/n): " install_docker
 if [ "$install_docker" = "y" ]; then
