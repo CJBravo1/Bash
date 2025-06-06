@@ -357,20 +357,11 @@ enroll_luks_tpm() {
     exit 1
   fi
 
-  if cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
+if cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
     KEYSLOT=$(cryptsetup luksDump "$CRYPT_DISK" | sed -n '/systemd-tpm2$/,/Keyslot:/p' | grep Keyslot|awk '{print $2}')
-    echo "TPM2 already present in LUKS keyslot $KEYSLOT of $CRYPT_DISK."
-    read -p "Wipe it and re-enroll? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-      systemd-cryptenroll --wipe-slot=tpm2 "$CRYPT_DISK"
-    else
-      echo
-      echo "Either clear the existing TPM2 keyslot before retrying, else choose 'y' next time."
-      echo "Exiting..."
-      [[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
-    fi
-  fi
+    echo "TPM2 already present in LUKS keyslot $KEYSLOT of $CRYPT_DISK. Automatically wiping it and re-enrolling."
+    systemd-cryptenroll --wipe-slot=tpm2 "$CRYPT_DISK"
+fi
 
   ## Run crypt enroll
   echo "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
