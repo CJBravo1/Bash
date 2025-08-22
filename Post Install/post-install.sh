@@ -14,6 +14,11 @@ fi
 
 ####Functions####
 ###Script Functions###
+
+echo_green () {
+    echo "$1"
+}
+
 get_timestamp() {
     date +"%Y-%m-%d %H:%M:%S"
 }
@@ -64,7 +69,7 @@ five_second_countdown() {
 
 addGreetings() {
 #Copy bash_aliases and bash_functions
-echo -e "\e[32mAdding Bash functions and aliases\e[0m"
+echo_green " Adding Bash functions and aliases"
 cat ~/Scripts/bash/Post\ Install/.bashrc >> ~/.bashrc 
 cp -v ~/Scripts/bash/Post\ Install/.bash_aliases ~/
 cp -v ~/Scripts/bash/Post\ Install/.bash_functions ~/
@@ -106,7 +111,7 @@ installFlatpacks() {
 
     )
     # Install all flatpaks at once
-    echo -e "\e[32mInstalling ${flatpaks[@]}\e[0m"  # Echo in green color
+    echo_green "Installing ${flatpaks[@]}"  # Echo in green color
     # This command installs the Flatpaks specified in the 'flatpaks' array.
     flatpak install -y ${flatpaks[@]}
 }
@@ -115,7 +120,7 @@ installGoogleChromeDeb() {
     log_message "Installing Google Chrome"
         if ! dpkg -s google-chrome-stable >/dev/null 2>&1; then
             # Install Google Chrome
-            echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+            echo_green "Installing Google Chrome"  # Echo in green color
             wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
             sudo dpkg -i google-chrome-stable_current_amd64.deb
             sudo apt install -f -y
@@ -126,12 +131,12 @@ installGoogleChromeDeb() {
 }
 
 installGoogleChromeRpm() {
-    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+    echo_green "Installing Google Chrome"  # Echo in green color
     sudo dnf install google-chrome-stable -y
 }
 
 installGoogleChromeFlatpak() {
-    echo -e "\e[32mInstalling Google Chrome\e[0m"  # Echo in green color
+    echo_green "Installing Google Chrome"  # Echo in green color
     flatpak install flathub com.google.Chrome -y
     flatpak override --user --filesystem=~/.local/share/applications --filesystem=~/.local/share/icons com.google.Chrome
 
@@ -141,7 +146,7 @@ installGoogleChromeFlatpak() {
 installVSCodeRPM()
 {
         #Install VSCode
-    echo -e "\e[32mInstalling Visual Studio Code\e[0m"  # Echo in green color
+    echo_green "Installing Visual Studio Code"  # Echo in green color
     sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
     echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
     dnf check-update
@@ -168,7 +173,7 @@ installPowershell()
     log_message "Installing PowerShell"
     if ! command -v pwsh >/dev/null 2>&1; then
         # Install PowerShell
-        echo -e "\e[32mInstalling PowerShell\e[0m"  # Echo in green color
+        echo_green "Installing PowerShell"  # Echo in green color
         if [ -f /etc/debian_version ]; then
             # Install PowerShell for Debian-based systems
             # Update the list of packages
@@ -360,8 +365,8 @@ enroll_luks_tpm() {
   if grep -q ^${LUKS_PREFIX} <<< "${RD_LUKS_UUID}"; then
     DISK_UUID=${RD_LUKS_UUID#"$LUKS_PREFIX"}
   else
-    echo -e "\e[31mLUKS UUID format mismatch.\e[0m"
-    echo -e "\e[31mExiting...\e[0m"
+    echo -e "\e[31mLUKS UUID format mismatch."
+    echo -e "\e[31mExiting..."
     return 1
   fi
 
@@ -385,7 +390,7 @@ enroll_luks_tpm() {
 fi
 
   ## Run crypt enroll
-  echo -e "\e[32mEnrolling TPM2 unlock requires your existing LUKS2 unlock password\e[0m"
+  echo_green "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
   sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+1+2 "$CRYPT_DISK"
 # Modify /etc/crypttab to include tpm2-device=auto for the relevant LUKS device
 
@@ -415,17 +420,17 @@ fi
     if rpm-ostree initramfs | grep tpm2 > /dev/null; then
       echo "TPM2 already present in rpm-ostree initramfs config."
       sudo rpm-ostree initramfs
-      echo -e "\e[33mRe-running initramfs to pickup changes above.\e[0m"
+      echo -e "\e[33mRe-running initramfs to pickup changes above."
     fi
     sudo rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
   else
     ## initramfs already containts tpm2-tss
-    echo -e "\e[33mTPM2 already present in initramfs.\e[0m"
+    echo -e "\e[33mTPM2 already present in initramfs."
   fi
 
   ## Now reboot
   echo
-  echo -e "\e[32mTPM2 LUKS auto-unlock configured.\e[0m"
+  echo_green "TPM2 LUKS auto-unlock configured."
 }
 
 
@@ -544,7 +549,7 @@ fi
 # Install Flatpacks
 if $WINDOW_MANAGER; then
     # Install Flatpacks
-    echo -e "\e[32mInstalling Flatpacks\e[0m"  # Echo in green color
+    echo_green "Installing Flatpacks"  # Echo in green color
     installGoogleChromeFlatpak
     installFlatpacks
     
@@ -606,4 +611,4 @@ addGreetings
 source ~/.bashrc
 
 # End of Script
-echo -e "\e[32EEnd of Script\e[0m"  # Echo in green color
+echo -e "\e[32EEnd of Script"  # Echo in green color
