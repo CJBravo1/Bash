@@ -6,4 +6,7 @@ if [ -f ~/.bash_functions ]; then
     . ~/.bash_functions
 fi
 
-greetings
+# Only run Greetings in interactive Shells
+case $- in
+        *i*) greetings;;
+esac
