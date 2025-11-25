@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    hostname: pihole
+    environment:
+      TZ: "America/Chicago"
+      WEBPASSWORD: "LostNumbers91!"
+      DNSMASQ_USER: "pihole"
+      FTL_CMD: "no-daemon"
+    volumes:
+      - pihole_pihole-data:/etc/pihole
+      - pihole_dnsmasq-data:/etc/dnsmasq.d
+    networks:
+      - pihole-net
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "443:443/tcp"
+      # Add 80 if you want the web UI exposed
+      # - "80:80/tcp"
+
+volumes:
+  pihole_pihole-data:
+  pihole_dnsmasq-data:
+
+networks:
+  pihole-net:
+    driver: bridge
