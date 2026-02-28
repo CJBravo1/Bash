@@ -11,7 +11,7 @@ function update_system {
     if command -v dnf &> /dev/null; then
         echo "dnf is installed, running updates..."
         sudo dnf update -y
-    elif command -v apt $> /dev/null; then
+    elif command -v apt &> /dev/null; then
         sudo apt update
         sudo apt upgrade -y
     fi
@@ -82,6 +82,7 @@ for option in "$@"; do
             echo "Running system update."
             update_system
             ;;
+        *)
             echo "Unknown option: $option"
             ;;
     esac
