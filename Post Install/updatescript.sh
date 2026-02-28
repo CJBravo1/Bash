@@ -60,53 +60,12 @@ function update_functions {
     done
 }
 
-function update_rclone {
-    #Copy Google Photos to OneDrive -- This is now being done by Deepthought
-    echo -e "\e[32mSyncing Google Photos to OneDrive\e[0m"
-    echo ""
-    rclone copy GooglePhotos:album/ OneDrive:Pictures/ --progress
-    
-    #Copy Google Photos Shared Albums to OneDrive
-    #echo -e "\e[32mSyncing Google Photos Shared Albums to OneDrive\e[0m"
-    echo ""
-    #rclone copy GooglePhotos:shared-album/ OneDrive:Pictures/ --exclude '*/\{**' --progress
-
-    #Sync Google Photos to Pictures
-    echo -e "\e[32mSyncing Google Photos to Pictures\e[0m"
-    #echo ""
-    rclone copy GooglePhotos:album/ $HOME/Pictures --progress
-
-    #Sync Google Photos Shared Albums to Pictures
-    #echo -e "\e[32mSyncing Google Photos Shared Albums to Pictures\e[0m"
-    #echo ""
-    #rclone copy GooglePhotos:shared-album/ $HOME/Pictures --exclude '*/\{ABZ9**' --progress
-}
-
-#Config Backup
-function config_backup {
-    # Create backup directory if it does not exist
-    if [ ! -d "$backupDirectory" ]; then
-        echo "Backup directory does not exist. Creating it..."
-        mkdir -p "$backupDirectory"
-    fi
-        mkdir -p "$backupDirectory/bashfiles"
-        mkdir -p "$backupDirectory/sshConfig"
-        for file in "$HOME"/.bash*; do
-            [ -e "$file" ] && cp -R "$file" "$backupDirectory/bashfiles"
-        done
-        cp -R "$HOME/.ssh" "$backupDirectory/sshConfig"
-
-}
 
 # If no options are specified, run all functions
 
 function run_all_tasks {
     update_system
     update_githubRepositories
-    if command -v rclone &> /dev/null; then
-        update_rclone
-    fi
-    config_backup
 }
 
 for option in "$@"; do
@@ -123,15 +82,6 @@ for option in "$@"; do
             echo "Running system update."
             update_system
             ;;
-        --rclone)
-            echo "Running rclone sync."
-            update_rclone
-            ;;
-        --config)
-            echo "Running config backup."
-            config_backup
-            ;;
-        *)
             echo "Unknown option: $option"
             ;;
     esac
