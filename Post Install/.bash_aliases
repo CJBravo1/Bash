@@ -1,3 +1,8 @@
 alias ll='ls -l'
 alias la='ls -A'
 alias l='ls -CF'
+alias grep='grep -i'
+alias codeBash='code ~/Scripts/bash'
+alias reload='source ~/.bashrc'
+alias gnomeshutdown='gnome-session-quit --power-off'
+alias gnomereboot='gnome-session-quit --reboot'
