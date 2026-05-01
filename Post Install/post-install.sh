@@ -288,7 +288,7 @@ installFedora() {
         sudo dnf remove firefox -y
     fi
     if rpm -q libreoffice >/dev/null 2>&1; then
-        sudo dnf remove libreoffice -y
+        sudo dnf remove libreoffice-* -y
     fi
 
     # Set DNF Default to Yes
