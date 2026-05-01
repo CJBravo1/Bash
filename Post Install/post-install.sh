@@ -259,7 +259,18 @@ installDebian() {
     sudo apt upgrade -y
     # Install Standard Packages
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
-    sudo apt install toilet fortune lolcat vim nano curl htop gh nfs-common gnome-firmware borgbackup -y
+    sudo apt install -y\
+    borgbackup\
+    curl\
+    fortune\
+    gh\
+    gnome-firmware\
+    htop\
+    lolcat\
+    nano\
+    nfs-common\
+    toilet\
+    vim
 
     # Check if a window manager is installed
     if check_WINDOW_MANAGER; then
@@ -325,7 +336,7 @@ installFedora() {
 
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    sudo dnf install \
+    sudo dnf install -y \
         borgbackup \
         fastfetch \
         fortune-mod \
@@ -339,8 +350,7 @@ installFedora() {
         pv \
         rclone \
         toilet \
-        vim \
-        -y
+        vim
 
 
     # Check for firmware updates
