@@ -109,8 +109,8 @@ installFlatpacks() {
         #org.gnome.Firmware
         org.gnome.World.PikaBackup
         org.remmina.Remmina
-
     )
+    
     # Install all flatpaks at once
     echo_green "Installing ${flatpaks[@]}"  # Echo in green color
     # This command installs the Flatpaks specified in the 'flatpaks' array.
@@ -354,6 +354,7 @@ installFedora() {
         pv \
         rclone \
         toilet \
+        tmux \
         vim
 
 
