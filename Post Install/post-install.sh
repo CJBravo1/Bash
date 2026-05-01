@@ -96,7 +96,7 @@ installFlatpacks() {
     log_message "Installing Flatpaks"
     flatpaks=(
         #app.drey.Damask
-        com.dropbox.Client
+        #com.dropbox.Client
         com.github.tchx84.Flatseal
         com.mattjakeman.ExtensionManager
         com.spotify.Client
@@ -110,7 +110,7 @@ installFlatpacks() {
         org.gnome.World.PikaBackup
         org.remmina.Remmina
     )
-    
+
     # Install all flatpaks at once
     echo_green "Installing ${flatpaks[@]}"  # Echo in green color
     # This command installs the Flatpaks specified in the 'flatpaks' array.
