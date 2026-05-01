@@ -240,9 +240,13 @@ customize_gnome() {
     
     # Install Extensions for GNOME if RedHat-based
     if command -v dnf >/dev/null 2>&1; then
-        sudo dnf install gnome-shell-extension-dash-to-dock -y
+        sudo dnf install -y\
+        gnome-tweaks\
+        gnome-shell-extension-dash-to-dock
     elif command -v apt >/dev/null 2>&1; then
-        sudo apt install gnome-shell-extension-dash-to-dock -y
+        sudo apt install -y\
+         gnome-tweaks\
+         gnome-shell-extension-dash-to-dock
     fi
     gnome-extensions enable
 }
@@ -581,6 +585,17 @@ if $WINDOW_MANAGER; then
         customize_gnome
     fi
 fi
+
+### Optional Configurations ###
+
+#Set Hostname
+read -p "Do you want to set the hostname? (y/n): " set_hostname
+if [ "$set_hostname" = "y" ]; then
+    read -p "Enter the new hostname: " new_hostname
+    sudo hostnamectl set-hostname "$new_hostname"
+    log_message "Hostname set to $new_hostname"
+fi
+
 # Enroll LUKS key into TPM
 read -p "Do you want to enroll LUKS key into TPM? (y/n): " enroll_tpm
 if [ "$enroll_tpm" = "y" ]; then
@@ -590,6 +605,8 @@ if [ "$enroll_tpm" = "y" ]; then
         echo "systemd-cryptenroll is not installed. Please install it and rerun the script."
     fi
 fi
+
+### Optional Installs ###
 
 #Install Visual Studio Code
 read -p "Do you want to install Visual Studio Code? (y/n): " install_vscode
