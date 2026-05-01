@@ -231,6 +231,23 @@ installPowershell()
     fi
 }
 
+
+customize_gnome() {
+    # Customize GNOME settings
+    log_message "Customizing GNOME settings"
+    gsettings set org.gnome.desktop.wm.preferences button-layout ":minimize,maximize,close"
+    
+    # Install Extensions for GNOME if RedHat-based
+    if command -v dnf >/dev/null 2>&1; then
+        sudo dnf install gnome-shell-extension-dash-to-dock -y
+    elif command -v apt >/dev/null 2>&1; then
+        sudo apt install gnome-shell-extension-dash-to-dock -y
+    fi
+    gnome-extensions enable
+}
+
+
+
 ####OS Specific Functions####
 installDebian() {    
     log_message "Performing system upgrade... This may take a while..."
