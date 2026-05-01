@@ -565,7 +565,10 @@ if $WINDOW_MANAGER; then
     echo_green "Installing Flatpacks"  # Echo in green color
     installGoogleChromeFlatpak
     installFlatpacks
-    
+    # Customize GNOME if it's the window manager
+    if [[ "$XDG_CURRENT_DESKTOP" == *"GNOME"* ]]; then
+        customize_gnome
+    fi
 fi
 # Enroll LUKS key into TPM
 read -p "Do you want to enroll LUKS key into TPM? (y/n): " enroll_tpm
