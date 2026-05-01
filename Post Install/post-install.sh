@@ -514,8 +514,6 @@ if [ -f /etc/debian_version ]; then
         else
             installGoogleChromeDeb
         fi
-        #Install Visual Studio Code
-        installVSCodeDeb
     fi
 fi
 
@@ -530,8 +528,6 @@ if [ -f /etc/redhat-release ]; then
         else
             installGoogleChromeRpm
         fi
-    #Install Visual Studio Code
-    installVSCodeRPM
     fi
 fi
  
@@ -564,6 +560,15 @@ if [ "$enroll_tpm" = "y" ]; then
     fi
 fi
 
+#Install Visual Studio Code
+read -p "Do you want to install Visual Studio Code? (y/n): " install_vscode
+if [ "$install_vscode" = "y" ]; then
+    if [ -f /etc/debian_version ]; then
+        installVSCodeDeb
+    elif [ -f /etc/redhat-release ]; then
+        installVSCodeRPM
+    fi
+fi
 
 # Install Docker
 read -p "Do you want to install Docker? (y/n): " install_docker
