@@ -249,6 +249,37 @@ customize_gnome() {
          gnome-shell-extension-dash-to-dock
     fi
     gnome-extensions enable
+
+    #Install Ulauncher
+    if ! command -v ulauncher >/dev/null 2>&1; then
+        echo "Installing Ulauncher"
+        if command -v dnf >/dev/null 2>&1; then
+            sudo dnf install -y ulauncher
+        elif command -v apt >/dev/null 2>&1; then
+            sudo apt install -y ulauncher
+        fi
+    else
+        echo "Ulauncher is already installed"
+    fi
+
+    # Set keyboard shortcut Super+Space to launch Ulauncher
+    echo "Setting keyboard shortcut Super+Space for Ulauncher"
+
+    # Remove existing custom keybindings using Super+Space
+    for kb_path in $(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings | tr -d "[],'"); do
+        if [ -n "$kb_path" ]; then
+            current_binding=$(gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${kb_path} binding 2>/dev/null)
+            if [ "$current_binding" = "'<Super>space'" ] || [ "$current_binding" = "'<Super>Space'" ]; then
+                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${kb_path} binding "''"
+            fi
+        fi
+    done
+
+    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']"
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name "Ulauncher"
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command "ulauncher-toggle"
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding "<Super>space"
+
 }
 
 
