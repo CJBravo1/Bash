@@ -67,6 +67,14 @@ five_second_countdown() {
     done
 }
 
+gnome_check() {
+    if [[ "$XDG_CURRENT_DESKTOP" == *"GNOME"* ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 addGreetings() {
 #Copy bash_aliases and bash_functions
 echo_green " Adding Bash functions and aliases"
@@ -75,6 +83,8 @@ cp -v ~/Scripts/bash/Post\ Install/.bash_aliases ~/
 cp -v ~/Scripts/bash/Post\ Install/.bash_functions ~/
 cp -v ~/Scripts/bash/Post\ Install/updatescript.sh ~/
 }
+
+####Installation Functions####
 
 installDocker(){
     curl -sSL https://get.docker.com | sh
@@ -734,6 +744,7 @@ fi
 read -p "Do you want to install Tailscale? (y/n): " install_tailscale
 if [ "$install_tailscale" = "y" ]; then
     install_tailscale
+    if 
 fi
 
 #Install Steam
