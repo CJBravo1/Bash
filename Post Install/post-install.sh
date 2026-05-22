@@ -75,14 +75,7 @@ gnome_check() {
     fi
 }
 
-addGreetings() {
-#Copy bash_aliases and bash_functions
-echo_green " Adding Bash functions and aliases"
-cat ~/Scripts/bash/Post\ Install/.bashrc >> ~/.bashrc 
-cp -v ~/Scripts/bash/Post\ Install/.bash_aliases ~/
-cp -v ~/Scripts/bash/Post\ Install/.bash_functions ~/
-cp -v ~/Scripts/bash/Post\ Install/updatescript.sh ~/
-}
+
 
 ####Installation Functions####
 
@@ -310,6 +303,16 @@ installVSCodeDeb(){
 
 }
 
+###Customization Functions###
+
+addGreetings() {
+    #Copy bash_aliases and bash_functions
+    echo_green " Adding Bash functions and aliases"
+    cat ~/Scripts/bash/Post\ Install/.bashrc >> ~/.bashrc 
+    cp -v ~/Scripts/bash/Post\ Install/.bash_aliases ~/
+    cp -v ~/Scripts/bash/Post\ Install/.bash_functions ~/
+    cp -v ~/Scripts/bash/Post\ Install/updatescript.sh ~/
+}
 
 customize_gnome() {
     # Customize GNOME settings
