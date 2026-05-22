@@ -82,15 +82,14 @@ installDocker(){
 
 installGhCopilot() {
     log_message "Installing GitHub Copilot"
-    if command -v gh >/dev/null 2>&1; then
-        echo "gh is installed"
-        gh auth login
-        gh extension install github/gh-copilot
-        #gh copilot alias bash >> ~/.bashrc
+    if command -v copilot >/dev/null 2>&1; then
+        echo "GitHub Copilot is installed"
     else
-        echo "gh is not installed"
+        echo "GitHub Copilot is not installed"
+        curl -fsSL https://gh.io/copilot-install | bash
     fi
 }
+
 
 installFlatpacks() {
     log_message "Installing Flatpaks"
@@ -143,33 +142,7 @@ installGoogleChromeFlatpak() {
 
 }
 
-
-installVSCodeRPM()
-{
-        #Install VSCode
-    echo_green "Installing Visual Studio Code"  # Echo in green color
-    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
-    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
-    dnf check-update
-    sudo dnf install code -y
-}
-
-installVSCodeDeb(){
-    echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
-    sudo apt -y install wget gpg
-    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
-    sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
-    echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" |sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
-    rm -f packages.microsoft.gpg
-    sudo apt install apt-transport-https
-    sudo apt update
-    sudo apt install -y code # or code-insiders
-
-
-}
-
-installPowershell()
-{
+installPowershell(){
     # Install PowerShell
     log_message "Installing PowerShell"
     if ! command -v pwsh >/dev/null 2>&1; then
@@ -230,6 +203,32 @@ installPowershell()
     else
         echo "PowerShell is already installed"
     fi
+}
+
+
+
+installVSCodeRPM()
+{
+        #Install VSCode
+    echo_green "Installing Visual Studio Code"  # Echo in green color
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+    dnf check-update
+    sudo dnf install code -y
+}
+
+installVSCodeDeb(){
+    echo "code code/add-microsoft-repo boolean true" | sudo debconf-set-selections
+    sudo apt -y install wget gpg
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+    sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+    echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" |sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
+    rm -f packages.microsoft.gpg
+    sudo apt install apt-transport-https
+    sudo apt update
+    sudo apt install -y code # or code-insiders
+
+
 }
 
 
@@ -665,7 +664,7 @@ fi
 # Install Tailscale
 read -p "Do you want to install Tailscale? (y/n): " install_tailscale
 if [ "$install_tailscale" = "y" ]; then
-    curl -fsSL https://tailscale.com/install.sh | sh
+    install_tailscale
 fi
 
 #Install Steam
