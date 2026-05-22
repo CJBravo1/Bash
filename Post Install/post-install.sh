@@ -206,6 +206,75 @@ installPowershell(){
 }
 
 
+install_tailscale_gnome_extension() {
+    echo "==> Installing Tailscale QS GNOME extension..."
+
+    # Get the installed GNOME Shell major version
+    local GNOME_VERSION
+    GNOME_VERSION=$(gnome-shell --version | awk '{print $3}' | cut -d. -f1)
+    echo "  -> Detected GNOME Shell version: $GNOME_VERSION"
+
+    # Query the extensions.gnome.org API to get the correct version_tag (pk)
+    # for this GNOME Shell version
+    echo "  -> Querying extensions.gnome.org for compatible version..."
+    local EXT_INFO VERSION_TAG
+    EXT_INFO=$(curl -fsSL \
+        "https://extensions.gnome.org/extension-info/?uuid=tailscale@joaophi.github.com&shell_version=${GNOME_VERSION}")
+
+    VERSION_TAG=$(echo "$EXT_INFO" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+svm = data.get('shell_version_map', {})
+key = '$GNOME_VERSION'
+if key in svm:
+    print(svm[key]['pk'])
+else:
+    # Fall back to highest available version
+    latest = sorted(svm.items(), key=lambda x: float(x[0]))[-1]
+    print(latest[1]['pk'])
+")
+
+    if [ -z "$VERSION_TAG" ]; then
+        echo "ERROR: Could not determine version_tag from extensions.gnome.org" >&2
+        return 1
+    fi
+    echo "  -> Using version_tag: $VERSION_TAG"
+
+    # Download the extension zip using the correct version_tag
+    echo "  -> Downloading Tailscale QS..."
+    curl -fsSL \
+        "https://extensions.gnome.org/download-extension/tailscale@joaophi.github.com.shell-extension.zip?version_tag=${VERSION_TAG}" \
+        -o /tmp/tailscale-qs.zip
+
+    # Install and enable using the official gnome-extensions CLI
+    echo "  -> Installing extension..."
+    gnome-extensions install --force /tmp/tailscale-qs.zip
+
+    echo "  -> Enabling extension..."
+    gnome-extensions enable tailscale@joaophi.github.com
+
+    # Clean up
+    rm -f /tmp/tailscale-qs.zip
+
+    # Required: set current user as Tailscale operator
+    echo "  -> Setting $USER as Tailscale operator..."
+    sudo tailscale set --operator="$USER"
+
+    echo "==> Done! Tailscale QS installed."
+    echo "    Log out and back in to activate (X11: Alt+F2 -> 'r' to restart GNOME Shell)."
+}
+
+
+install_tailscale() {
+    log_message "Installing Tailscale"
+    if ! command -v tailscale >/dev/null 2>&1; then
+        echo_green "Installing Tailscale"  # Echo in green color
+        curl -fsSL https://tailscale.com/install.sh | sh && install_tailscale_gnome_extension
+        
+    else
+        echo "Tailscale is already installed"
+    fi
+}
 
 installVSCodeRPM()
 {
