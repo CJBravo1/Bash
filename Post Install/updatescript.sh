@@ -21,11 +21,6 @@ function update_system {
         echo "flatpak is installed, running updates..."
         flatpak upgrade -y
     fi
-    #gh updates
-    if command -v gh &> /dev/null; then
-        echo "gh is installed, running updates..."
-        gh extension upgrade --all
-    fi
 }
 
 function wait_for_kernel_update_completion {
