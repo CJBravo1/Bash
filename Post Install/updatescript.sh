@@ -79,11 +79,15 @@ function update_functions {
 
 update_pihole() {
     echo -e "\e[32mUpdating Pi-hole\e[0m"
-    if command -v pihole &> /dev/null; then
+    pihole_container=$(docker ps --filter "ancestor=pihole/pihole" --format "{{.Names}}" 2>/dev/null | head -n1)
+    if [ -n "$pihole_container" ]; then
+        echo "Pi-hole container '$pihole_container' is running, updating gravity..."
+        docker exec "$pihole_container" pihole -g
+    elif command -v pihole &> /dev/null || type pihole &> /dev/null; then
         echo "Pi-hole is installed, running update..."
         pihole -g
     else
-        echo "Pi-hole is not installed, skipping update."
+        echo "Pi-hole is not installed or not running, skipping update."
     fi
 }
 
@@ -92,7 +96,8 @@ update_pihole() {
 function run_all_tasks {
     update_system
     update_githubRepositories
-    if command -v pihole &> /dev/null; then
+    if [ -n "$(docker ps --filter "ancestor=pihole/pihole" --format "{{.Names}}" 2>/dev/null)" ] || \
+       command -v pihole &> /dev/null || type pihole &> /dev/null; then
         update_pihole
     fi
 }
