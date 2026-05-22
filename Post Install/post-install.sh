@@ -653,12 +653,12 @@ if [ -f /etc/debian_version ]; then
     installDebian
 
     if $WINDOW_MANAGER; then
-        if $FLATPAK_INSTALLED; then
+        #if $FLATPAK_INSTALLED; then
             #Install Google Chrome
-            installGoogleChromeFlatpak
+         #   installGoogleChromeFlatpak
         else
             installGoogleChromeDeb
-        fi
+        #fi
     fi
 fi
 
@@ -667,12 +667,12 @@ if [ -f /etc/redhat-release ]; then
     installFedora
 
     if $WINDOW_MANAGER; then
-        if $FLATPAK_INSTALLED; then
+        #if $FLATPAK_INSTALLED; then
             #Install Google Chrome
-            installGoogleChromeFlatpak
-        else
+        #    installGoogleChromeFlatpak
+        #else
             installGoogleChromeRpm
-        fi
+       # fi
     fi
 fi
  
