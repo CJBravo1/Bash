@@ -536,7 +536,7 @@ fi
 
   ## Run crypt enroll
   echo_green "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
-  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+1+2 "$CRYPT_DISK"
+  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 "$CRYPT_DISK"
 # Modify /etc/crypttab to include tpm2-device=auto for the relevant LUKS device
 
 
