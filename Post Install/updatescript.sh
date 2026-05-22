@@ -77,12 +77,24 @@ function update_functions {
     done
 }
 
+update_pihole() {
+    echo -e "\e[32mUpdating Pi-hole\e[0m"
+    if command -v pihole &> /dev/null; then
+        echo "Pi-hole is installed, running update..."
+        pihole -g
+    else
+        echo "Pi-hole is not installed, skipping update."
+    fi
+}
 
 # If no options are specified, run all functions
 
 function run_all_tasks {
     update_system
     update_githubRepositories
+    if command -v pihole &> /dev/null; then
+        update_pihole
+    fi
 }
 
 for option in "$@"; do
