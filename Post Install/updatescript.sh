@@ -49,6 +49,15 @@ function update_githubRepositories {
     if [ -d "$HOME/Scripts/bash" ]; then
         echo -e "\e[32mUpdating bash git repository\e[0m"
         git -C "$HOME/Scripts/bash" pull
+        
+        #Copy updatescript.sh to home directory if it has changed
+        repo_update_script="$HOME/Scripts/bash/Post Install/updatescript.sh"
+        home_update_script="$HOME/updatescript.sh"
+        if [ -f "$repo_update_script" ] && ! cmp -s "$repo_update_script" "$home_update_script"; then
+            echo -e "\e[32mupdatescript.sh has changed, copying to home directory\e[0m"
+            cp "$repo_update_script" "$home_update_script"
+            chmod +x "$home_update_script"
+        fi
     fi
 
     #Update PowerShell git repositories
@@ -56,6 +65,8 @@ function update_githubRepositories {
         echo -e "\e[32mUpdating PSScripts git repository\e[0m"
         git -C "$HOME/Scripts/PSScripts" pull
     fi
+
+
 }
 
 function update_functions {
