@@ -49,7 +49,7 @@ function update_githubRepositories {
     if [ -d "$HOME/Scripts/bash" ]; then
         echo -e "\e[32mUpdating bash git repository\e[0m"
         git -C "$HOME/Scripts/bash" pull
-        
+
         #Copy updatescript.sh to home directory if it has changed
         repo_update_script="$HOME/Scripts/bash/Post Install/updatescript.sh"
         home_update_script="$HOME/updatescript.sh"
@@ -106,11 +106,11 @@ update_pihole() {
 
 function run_all_tasks {
     update_system
-    update_githubRepositories
     if [ -n "$(docker ps --filter "ancestor=pihole/pihole" --format "{{.Names}}" 2>/dev/null)" ] || \
        command -v pihole &> /dev/null || type pihole &> /dev/null; then
         update_pihole
     fi
+    update_githubRepositories
 }
 
 for option in "$@"; do
