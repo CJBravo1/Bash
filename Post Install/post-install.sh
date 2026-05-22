@@ -744,7 +744,9 @@ fi
 read -p "Do you want to install Tailscale? (y/n): " install_tailscale
 if [ "$install_tailscale" = "y" ]; then
     install_tailscale
-    if 
+    if $WINDOW_MANAGER && [[ "$XDG_CURRENT_DESKTOP" == *"GNOME"* ]]; then
+        install_tailscale_gnome_extension
+    fi
 fi
 
 #Install Steam
