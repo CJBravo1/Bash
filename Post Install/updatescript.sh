@@ -27,6 +27,23 @@ function update_system {
         gh extension upgrade --all
     fi
 }
+
+function wait_for_kernel_update_completion {
+    # Ensure package manager/kernel install work is complete before reboot/poweroff
+    while pgrep -x dnf >/dev/null || \
+          pgrep -x apt >/dev/null || \
+          pgrep -x apt-get >/dev/null || \
+          pgrep -x dpkg >/dev/null || \
+          pgrep -x rpm >/dev/null || \
+          pgrep -x dracut >/dev/null || \
+          pgrep -x mkinitcpio >/dev/null || \
+          pgrep -x update-initramfs >/dev/null || \
+          pgrep -f "grub2-mkconfig|update-grub|grub-mkconfig" >/dev/null; do
+        echo "Kernel/package update still in progress. Waiting before reboot/poweroff..."
+        sleep 5
+    done
+}
+
 function update_githubRepositories {
     #Update bash git repositories
     if [ -d "$HOME/Scripts/bash" ]; then
@@ -96,6 +113,8 @@ fi
 if [ "$reboot" = true ]; then
     echo "Rebooting after updates and syncs."
     run_all_tasks
+    wait_for_kernel_update_completion
+    
     if command -v gnome-session-quit &> /dev/null; then
         gnome-session-quit --reboot
     else
@@ -106,6 +125,7 @@ fi
 if [ "$poweroff" = true ]; then
     echo "Powering off after updates and syncs."
     run_all_tasks
+    wait_for_kernel_update_completion
     if command -v gnome-session-quit &> /dev/null; then
         gnome-session-quit --power-off
     else
