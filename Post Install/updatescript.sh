@@ -11,9 +11,11 @@ function update_system {
     if command -v dnf &> /dev/null; then
         echo "dnf is installed, running updates..."
         sudo dnf update -y
+        sudo dnf autoremove -y
     elif command -v apt &> /dev/null; then
         sudo apt update
         sudo apt upgrade -y
+        sudo apt autoremove -y
     fi
 
     #Flatpak Updates
