@@ -768,6 +768,20 @@ if [ "$install_powershell" = "y" ]; then
     installPowershell
 fi
 
+# Install Claude Code
+read -p "Do you want to install Claude Code? (y/n): " install_claude
+if [ "$install_claude" = "y" ]; then
+    if ! command -v node >/dev/null 2>&1; then
+        log_message "Installing Node.js (required for Claude Code)"
+        if [ -f /etc/debian_version ]; then
+            sudo apt install -y nodejs npm
+        elif [ -f /etc/redhat-release ]; then
+            sudo dnf install -y nodejs npm
+        fi
+    fi
+    log_message "Installing Claude Code"
+    sudo npm install -g @anthropic-ai/claude-code
+fi
 
 # Create SSH Keys
 echo "Creating SSH Keys"
