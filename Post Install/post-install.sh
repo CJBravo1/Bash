@@ -656,7 +656,7 @@ if [ -f /etc/debian_version ]; then
         #if $FLATPAK_INSTALLED; then
             #Install Google Chrome
          #   installGoogleChromeFlatpak
-        else
+        #else
             installGoogleChromeDeb
         #fi
     fi
