@@ -83,13 +83,13 @@ installDocker(){
     curl -sSL https://get.docker.com | sh
 }
 
-installGhCopilot() {
-    log_message "Installing GitHub Copilot"
-    if command -v copilot >/dev/null 2>&1; then
-        echo "GitHub Copilot is installed"
+installClaudeCode() {
+    log_message "Installing Claude Code"
+    if command -v claude >/dev/null 2>&1; then
+        echo "Claude Code is already installed"
     else
-        echo "GitHub Copilot is not installed"
-        curl -fsSL https://gh.io/copilot-install | bash
+        echo "Claude Code is not installed, installing..."
+        curl -fsSL https://claude.ai/install.sh | bash
     fi
 }
 
