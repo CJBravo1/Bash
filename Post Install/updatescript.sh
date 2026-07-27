@@ -52,8 +52,15 @@ function update_githubRepositories {
         home_update_script="$HOME/updatescript.sh"
         if [ -f "$repo_update_script" ] && ! cmp -s "$repo_update_script" "$home_update_script"; then
             echo -e "\e[32mupdatescript.sh has changed, copying to home directory\e[0m"
-            cp "$repo_update_script" "$home_update_script"
-            chmod +x "$home_update_script"
+            # Copy to a temp file and mv into place rather than overwriting in-place with cp.
+            # This script may be $home_update_script itself while it's running; cp truncates
+            # and rewrites the same inode, which corrupts bash's read of the still-running
+            # script. mv swaps the directory entry to a new inode, leaving the running
+            # process's already-open file descriptor pointing at the old (valid) content.
+            tmp_update_script="$(mktemp "$HOME/.updatescript.sh.XXXXXX")"
+            cp "$repo_update_script" "$tmp_update_script"
+            chmod +x "$tmp_update_script"
+            mv "$tmp_update_script" "$home_update_script"
         fi
     fi
 
