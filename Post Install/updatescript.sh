@@ -85,6 +85,18 @@ function update_functions {
     done
 }
 
+function update_remoteHosts {
+    if [ "$(hostname)" != "wonder" ]; then
+        return
+    fi
+
+    local hosts=(airwave soundwave)
+    for host in "${hosts[@]}"; do
+        echo -e "\e[32mRunning updatescript.sh on $host\e[0m"
+        ssh "$host" '~/updatescript.sh'
+    done
+}
+
 update_pihole() {
     echo -e "\e[32mUpdating Pi-hole\e[0m"
     pihole_container=$(docker ps --filter "ancestor=pihole/pihole" --format "{{.Names}}" 2>/dev/null | head -n1)
@@ -108,6 +120,7 @@ function run_all_tasks {
         update_pihole
     fi
     update_githubRepositories
+    update_remoteHosts
 }
 
 for option in "$@"; do
