@@ -377,6 +377,7 @@ installDebian() {
     echo "Running: sudo apt install toilet fortune lolcat vim nano htop -y"
     sudo apt install -y\
     borgbackup\
+    btop\
     curl\
     fortune\
     gh\
@@ -454,6 +455,7 @@ installFedora() {
     echo "Running: Standard Package Installs"
     sudo dnf install -y \
         borgbackup \
+        btop \
         fastfetch \
         fortune-mod \
         gh \
@@ -594,7 +596,7 @@ installSilverblue() {
 
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    rpm-ostree install toilet borgbackup fortune-mod lolcat vim nano htop gh pv fastfetch gnome-firmware rclone mscore-fonts-all
+    rpm-ostree install toilet borgbackup fortune-mod lolcat vim nano htop btop gh pv fastfetch gnome-firmware rclone mscore-fonts-all
 
     # Remove unwanted packages
     echo "Removing unwanted packages"
