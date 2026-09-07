@@ -318,7 +318,10 @@ customize_gnome() {
     # Customize GNOME settings
     log_message "Customizing GNOME settings"
     gsettings set org.gnome.desktop.wm.preferences button-layout ":minimize,maximize,close"
-    
+
+    # Sort files by Type in the default folder view
+    gsettings set org.gnome.nautilus.preferences default-sort-order type
+
     # Install Extensions for GNOME if RedHat-based
     if command -v dnf >/dev/null 2>&1; then
         sudo dnf install -y\
