@@ -4,7 +4,9 @@
 # Set variables
 ACTUAL_USER=$SUDO_USER
 ACTUAL_HOME=$(eval echo ~$SUDO_USER)
-LOG_FILE="/var/log/PostInstall.log"
+LOG_DIR="$ACTUAL_HOME/.log"
+LOG_FILE="$LOG_DIR/PostInstall.log"
+mkdir -p "$LOG_DIR"
 
 # Check if Flatpak is installed
 FLATPAK_INSTALLED=false
@@ -16,7 +18,17 @@ fi
 ###Script Functions###
 
 echo_green () {
-    echo "$1"
+    echo -e "\e[32m$1\e[0m"
+}
+
+# Set key=value in a config file, replacing an existing entry instead of appending a duplicate
+set_config_value() {
+    local file="$1" key="$2" value="$3"
+    if sudo grep -q "^${key}=" "$file"; then
+        sudo sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+    else
+        echo "${key}=${value}" | sudo tee -a "$file" > /dev/null
+    fi
 }
 
 get_timestamp() {
@@ -24,7 +36,11 @@ get_timestamp() {
 }
 
 check_WINDOW_MANAGER() {
-    if [ -n "$XDG_CURRENT_DESKTOP" ] || [ -n "$DESKTOP_SESSION" ]; then
+    # Look for an installed desktop rather than session env vars, which are
+    # missing over SSH/sudo. A display manager or session files mean a DE exists.
+    if [ -e /etc/systemd/system/display-manager.service ] \
+        || compgen -G "/usr/share/xsessions/*.desktop" >/dev/null \
+        || compgen -G "/usr/share/wayland-sessions/*.desktop" >/dev/null; then
         log_message "Window manager is installed"
         WINDOW_MANAGER=true
         return 0
@@ -272,8 +288,7 @@ install_tailscale() {
     log_message "Installing Tailscale"
     if ! command -v tailscale >/dev/null 2>&1; then
         echo_green "Installing Tailscale"  # Echo in green color
-        curl -fsSL https://tailscale.com/install.sh | sh && install_tailscale_gnome_extension
-        
+        curl -fsSL https://tailscale.com/install.sh | sh
     else
         echo "Tailscale is already installed"
     fi
@@ -332,7 +347,7 @@ customize_gnome() {
          gnome-tweaks\
          gnome-shell-extension-dash-to-dock
     fi
-    gnome-extensions enable
+    gnome-extensions enable dash-to-dock@micxgx.gmail.com
 
     #Install Ulauncher
     if ! command -v ulauncher >/dev/null 2>&1; then
@@ -384,7 +399,6 @@ installDebian() {
     curl\
     fortune\
     gh\
-    gnome-firmware\
     htop\
     lolcat\
     nano\
@@ -394,6 +408,9 @@ installDebian() {
 
     # Check if a window manager is installed
     if check_WINDOW_MANAGER; then
+        # Desktop-only packages
+        sudo apt install -y gnome-firmware
+
         # Check if Flatpak is installed
         if ! command -v flatpak >/dev/null 2>&1; then
             # Install Flatpak
@@ -429,8 +446,8 @@ installFedora() {
 
     # Set DNF Parallel Downloads
     sudo cp "/etc/dnf/dnf.conf" "/etc/dnf/dnf.conf.bak"
-    echo "max_parallel_downloads=10" | sudo tee -a /etc/dnf/dnf.conf > /dev/null
-    echo "fastestmirror=True" | sudo tee -a /etc/dnf/dnf.conf > /dev/null
+    set_config_value /etc/dnf/dnf.conf max_parallel_downloads 10
+    set_config_value /etc/dnf/dnf.conf fastestmirror True
     sudo dnf -y install dnf-plugins-core
     
     if rpm -q firefox >/dev/null 2>&1; then
@@ -444,8 +461,8 @@ installFedora() {
     sudo sed -i 's/^#default_yes=default_no/default_yes=default_yes/' /etc/dnf/dnf.conf
 
     # Enable RPM Fusion repositories to access additional software packages and codecs
-    dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
-    dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+    sudo dnf install -y https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+    sudo dnf install -y https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
     dnf group update core -y
 
     # Start with Updates
@@ -462,17 +479,22 @@ installFedora() {
         fastfetch \
         fortune-mod \
         gh \
-        gnome-firmware \
-        gparted \
         htop \
         lolcat \
-        mscore-fonts-all \
         nano \
         pv \
         rclone \
         toilet \
         tmux \
         vim
+
+    # Desktop-only packages
+    if $WINDOW_MANAGER; then
+        sudo dnf install -y \
+            gnome-firmware \
+            gparted \
+            mscore-fonts-all
+    fi
 
 
     # Check for firmware updates
@@ -533,49 +555,54 @@ enroll_luks_tpm() {
     return 1
   fi
 
-    if sudo cryptsetup luksDump "$CRYPT_DISK" | grep systemd-tpm2 > /dev/null; then
-    KEYSLOT=$(cryptsetup luksDump "$CRYPT_DISK" | sed -n '/systemd-tpm2$/,/Keyslot:/p' | grep Keyslot|awk '{print $2}')
+  if sudo cryptsetup luksDump "$CRYPT_DISK" | grep -q systemd-tpm2; then
+    KEYSLOT=$(sudo cryptsetup luksDump "$CRYPT_DISK" | sed -n '/systemd-tpm2$/,/Keyslot:/p' | grep Keyslot | awk '{print $2}')
     echo "TPM2 already present in LUKS keyslot $KEYSLOT of $CRYPT_DISK. Automatically wiping it and re-enrolling."
     sudo systemd-cryptenroll --wipe-slot=tpm2 "$CRYPT_DISK"
-fi
+  fi
 
   ## Run crypt enroll
   echo_green "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
   sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 "$CRYPT_DISK"
-# Modify /etc/crypttab to include tpm2-device=auto for the relevant LUKS device
 
-
-if [ -n "$LUKS_NAME" ]; then
-    sudo sed -i "/$LUKS_NAME\|$DISK_UUID/ s/$/ ,tpm2-device=auto/" "$CRYPTTAB_FILE"
-    log_message "Added tpm2-device=auto to $CRYPTTAB_FILE for $LUKS_NAME"
-else
-    log_message "Could not find LUKS device name for UUID $DISK_UUID in lsblk output."
-fi
-# Regenerate initramfs and update GRUB to accept the new enrollment
-if command -v dracut >/dev/null 2>&1; then
-    sudo dracut --force --add tpm2-tss
-    log_message "Regenerated initramfs with dracut."
-fi
-
-if command -v update-grub >/dev/null 2>&1; then
-    sudo update-grub
-    log_message "Updated GRUB bootloader."
-elif command -v grub2-mkconfig >/dev/null 2>&1; then
-    sudo grub2-mkconfig -o /boot/grub2/grub.cfg
-    log_message "Updated GRUB2 bootloader."
-fi
-
-  if lsinitrd 2>&1 | grep -q tpm2-tss > /dev/null; then
-    ## add tpm2-tss to initramfs
-    if rpm-ostree initramfs | grep tpm2 > /dev/null; then
-      echo "TPM2 already present in rpm-ostree initramfs config."
-      sudo rpm-ostree initramfs
-      echo -e "\e[33mRe-running initramfs to pickup changes above."
+  ## Add tpm2-device=auto to the options field (4th column) of the crypttab entry
+  LUKS_NAME="$RD_LUKS_UUID"
+  CRYPTTAB_FILE="/etc/crypttab"
+  if sudo grep -q "^${LUKS_NAME}[[:space:]]" "$CRYPTTAB_FILE"; then
+    if sudo grep -q "^${LUKS_NAME}[[:space:]].*tpm2-device=" "$CRYPTTAB_FILE"; then
+      log_message "tpm2-device already set in $CRYPTTAB_FILE for $LUKS_NAME"
+    else
+      sudo cp "$CRYPTTAB_FILE" "$CRYPTTAB_FILE.bak"
+      sudo awk -v name="$LUKS_NAME" '
+        $1 == name {
+          if (NF < 3) $3 = "none"
+          $4 = (NF >= 4) ? $4 ",tpm2-device=auto" : "tpm2-device=auto"
+        }
+        { print }' "$CRYPTTAB_FILE" | sudo tee "$CRYPTTAB_FILE.new" > /dev/null \
+        && sudo mv "$CRYPTTAB_FILE.new" "$CRYPTTAB_FILE"
+      log_message "Added tpm2-device=auto to $CRYPTTAB_FILE for $LUKS_NAME"
     fi
-    sudo rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
   else
-    ## initramfs already containts tpm2-tss
-    echo -e "\e[33mTPM2 already present in initramfs."
+    log_message "Could not find $LUKS_NAME in $CRYPTTAB_FILE"
+  fi
+
+  ## Make sure the initramfs includes tpm2-tss so it can unlock at boot
+  if [ -e /run/ostree-booted ]; then
+    sudo rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
+    log_message "Enabled rpm-ostree initramfs with tpm2-tss."
+  elif command -v dracut >/dev/null 2>&1; then
+    # Persist the module so future kernel updates keep it
+    echo 'add_dracutmodules+=" tpm2-tss "' | sudo tee /etc/dracut.conf.d/tpm2.conf > /dev/null
+    sudo dracut --force
+    log_message "Regenerated initramfs with dracut."
+
+    if command -v update-grub >/dev/null 2>&1; then
+      sudo update-grub
+      log_message "Updated GRUB bootloader."
+    elif command -v grub2-mkconfig >/dev/null 2>&1; then
+      sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+      log_message "Updated GRUB2 bootloader."
+    fi
   fi
 
   ## Now reboot
@@ -587,7 +614,7 @@ fi
 installSilverblue() {
     # Set rpm-ostree parallel downloads
     sudo cp "/etc/rpm-ostree.conf" "/etc/rpm-ostree.conf.bak"
-    echo "max_parallel_downloads=10" | sudo tee -a /etc/rpm-ostree.conf > /dev/null
+    set_config_value /etc/rpm-ostree.conf max_parallel_downloads 10
 
     # Enable RPM Fusion repositories for Silverblue
     rpm-ostree install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
@@ -667,8 +694,8 @@ if [ -f /etc/debian_version ]; then
     fi
 fi
 
-# Check if the OS is Fedora
-if [ -f /etc/redhat-release ]; then
+# Check if the OS is Fedora (excluding ostree-based Silverblue/Kinoite)
+if [ -f /etc/redhat-release ] && [ ! -e /run/ostree-booted ]; then
     installFedora
 
     if $WINDOW_MANAGER; then
@@ -696,7 +723,6 @@ fi
 if $WINDOW_MANAGER; then
     # Install Flatpacks
     echo_green "Installing Flatpacks"  # Echo in green color
-    installGoogleChromeFlatpak
     installFlatpacks
     # Customize GNOME if it's the window manager
     if [[ "$XDG_CURRENT_DESKTOP" == *"GNOME"* ]]; then
@@ -727,12 +753,14 @@ fi
 ### Optional Installs ###
 
 #Install Visual Studio Code
-read -p "Do you want to install Visual Studio Code? (y/n): " install_vscode
-if [ "$install_vscode" = "y" ]; then
-    if [ -f /etc/debian_version ]; then
-        installVSCodeDeb
-    elif [ -f /etc/redhat-release ]; then
-        installVSCodeRPM
+if $WINDOW_MANAGER; then
+    read -p "Do you want to install Visual Studio Code? (y/n): " install_vscode
+    if [ "$install_vscode" = "y" ]; then
+        if [ -f /etc/debian_version ]; then
+            installVSCodeDeb
+        elif [ -f /etc/redhat-release ]; then
+            installVSCodeRPM
+        fi
     fi
 fi
 
@@ -758,12 +786,14 @@ if [ "$install_tailscale" = "y" ]; then
 fi
 
 #Install Steam
-read -p "Do you want to install Steam? (y/n): " install_steam
-if [ "$install_steam" = "y" ]; then
-    if [ -f /etc/debian_version ]; then
-        sudo apt install steam -y
-    elif [ -f /etc/redhat-release ]; then
-        sudo dnf install steam -y
+if $WINDOW_MANAGER; then
+    read -p "Do you want to install Steam? (y/n): " install_steam
+    if [ "$install_steam" = "y" ]; then
+        if [ -f /etc/debian_version ]; then
+            sudo apt install steam -y
+        elif [ -f /etc/redhat-release ]; then
+            sudo dnf install steam -y
+        fi
     fi
 fi
 
@@ -774,8 +804,12 @@ if [ "$install_powershell" = "y" ]; then
 fi
 
 # Create SSH Keys
-echo "Creating SSH Keys"
-ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa <<< y
+if [ -f ~/.ssh/id_ed25519 ]; then
+    echo "SSH key already exists, skipping"
+else
+    echo "Creating SSH Keys"
+    ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+fi
 
 # Add Bash Greetings
 addGreetings
@@ -784,4 +818,4 @@ addGreetings
 source ~/.bashrc
 
 # End of Script
-echo -e "\e[32EEnd of Script"  # Echo in green color
+echo_green "End of Script"
