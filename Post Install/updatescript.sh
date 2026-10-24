@@ -118,6 +118,34 @@ update_pihole() {
     fi
 }
 
+update_portainer() {
+    echo -e "\e[32mChecking for Portainer update\e[0m"
+    if ! command -v docker &> /dev/null || [ -z "$(docker ps -a --filter "name=^portainer$" --format "{{.Names}}" 2>/dev/null)" ]; then
+        echo "Portainer is not installed, skipping update."
+        return
+    fi
+
+    image=$(docker inspect portainer --format '{{.Config.Image}}')
+    current_id=$(docker inspect portainer --format '{{.Image}}')
+    docker pull "$image"
+    new_id=$(docker image inspect "$image" --format '{{.Id}}')
+
+    if [ "$current_id" = "$new_id" ]; then
+        echo "Portainer is up to date."
+        return
+    fi
+
+    echo "New Portainer image found, backing up data and recreating container..."
+    mkdir -p "$backupDirectory"
+    docker run --rm -v portainer_data:/data -v "$backupDirectory":/backup alpine \
+        tar czf "/backup/portainer_data-$(date +%F).tar.gz" -C /data .
+    docker stop portainer && docker rm portainer
+    docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always \
+        -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data "$image"
+    docker image prune -f
+    echo -e "\e[32mPortainer updated: ${current_id:7:12} -> ${new_id:7:12}\e[0m"
+}
+
 # If no options are specified, run all functions
 
 function run_all_tasks {
@@ -126,6 +154,7 @@ function run_all_tasks {
        command -v pihole &> /dev/null || type pihole &> /dev/null; then
         update_pihole
     fi
+    update_portainer
     update_githubRepositories
     update_remoteHosts
 }
@@ -143,6 +172,10 @@ for option in "$@"; do
         --update)
             echo "Running system update."
             update_system
+            ;;
+        --portainer)
+            echo "Running Portainer update."
+            update_portainer
             ;;
         *)
             echo "Unknown option: $option"
