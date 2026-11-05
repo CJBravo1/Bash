@@ -511,89 +511,163 @@ installFedora() {
     fi
 }
 
+# Print each LUKS UUID named by rd.luks.uuid= on the kernel command line.
+# Accepts both rd.luks.uuid=luks-<uuid> and rd.luks.uuid=<uuid>.
+luks_uuids_from_cmdline() {
+  local cmdline_file="${1:-/proc/cmdline}"
+  xargs -n1 -a "$cmdline_file" | sed -n 's/^rd\.luks\.uuid=//p' | sed 's/^luks-//' | sort -u
+}
+
+# Print the keyslots used by systemd-tpm2 tokens, comma separated.
+# --disable-external-tokens is needed: with systemd 262 the token plugin moves
+# the rest of the luksDump output to stderr.
+luks_tpm2_keyslots() {
+  sudo cryptsetup luksDump --disable-external-tokens "$1" | awk '
+    /^  [0-9]+: systemd-tpm2$/ { f=1; next }
+    /^  [0-9]+: /              { f=0 }
+    f && /Keyslot:/            { print $2; f=0 }' | paste -sd, -
+}
+
+# Set the key file field to none and add tpm2-device=auto for one volume.
+# A key file left in the third field stops the TPM unlock being used at boot.
+update_crypttab_tpm() {
+  local uuid="$1" crypttab_file="${2:-/etc/crypttab}"
+  local new_file="$crypttab_file.new"
+
+  if ! sudo awk -v uuid="$uuid" '
+      !/^[[:space:]]*#/ && ($1 == "luks-" uuid || $2 == "UUID=" uuid) { found=1 }
+      END { exit !found }' "$crypttab_file"; then
+    log_message "Could not find LUKS volume $uuid in $crypttab_file"
+    return 1
+  fi
+
+  sudo cp -a "$crypttab_file" "$crypttab_file.bak" || return 1
+  sudo awk -v uuid="$uuid" '
+    !/^[[:space:]]*#/ && ($1 == "luks-" uuid || $2 == "UUID=" uuid) {
+      $3 = "none"
+      if ($4 == "" || $4 == "none") $4 = "tpm2-device=auto"
+      else if ($4 !~ /(^|,)tpm2-device=/) $4 = $4 ",tpm2-device=auto"
+    }
+    { print }' "$crypttab_file" | sudo tee "$new_file" > /dev/null || return 1
+
+  if ! sudo test -s "$new_file"; then
+    sudo rm -f "$new_file"
+    log_message "Failed to write $new_file. $crypttab_file was not changed."
+    return 1
+  fi
+
+  sudo chmod 600 "$new_file"
+  sudo mv "$new_file" "$crypttab_file" || return 1
+  command -v restorecon >/dev/null 2>&1 && sudo restorecon "$crypttab_file"
+  log_message "Set tpm2-device=auto in $crypttab_file for luks-$uuid"
+}
+
+# Enroll one LUKS volume into the TPM and update crypttab.
+enroll_luks_device() {
+  local uuid="$1"
+  local crypt_disk="/dev/disk/by-uuid/$uuid"
+  local wipe_args=() tpm2_slots answer
+
+  if [[ ! -L "$crypt_disk" ]]; then
+    printf "LUKS device %s not listed in block devices.\n" "$crypt_disk"
+    return 1
+  fi
+
+  if ! sudo cryptsetup isLuks --type luks2 "$crypt_disk"; then
+    printf "%s is not LUKS2. TPM enrollment needs LUKS2.\n" "$crypt_disk"
+    return 1
+  fi
+
+  # Clevis cannot find its tokens once systemd-tpm2 tokens share the header
+  if sudo cryptsetup luksDump --disable-external-tokens "$crypt_disk" | grep -qE '^  [0-9]+: clevis$'; then
+    echo -e "\e[31mClevis is bound to $crypt_disk. With systemd 262 clevis stops working once a systemd-tpm2 token is present.\e[0m"
+    read -p "Continue with TPM enrollment anyway? (y/n): " answer
+    if [ "$answer" != "y" ]; then
+      echo "Skipping $crypt_disk"
+      return 1
+    fi
+  fi
+
+  tpm2_slots=$(luks_tpm2_keyslots "$crypt_disk")
+  if [ -n "$tpm2_slots" ]; then
+    echo "TPM2 already present in LUKS keyslot(s) $tpm2_slots of $crypt_disk. Replacing it after the new enrollment succeeds."
+    wipe_args=(--wipe-slot=tpm2)
+  fi
+
+  # Combined on purpose: systemd-cryptenroll enrolls first and only then wipes,
+  # so a failed enrollment leaves the existing TPM slot in place.
+  echo_green "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
+  if ! sudo systemd-cryptenroll "${wipe_args[@]}" --tpm2-device=auto --tpm2-pcrs=7+14 "$crypt_disk"; then
+    log_message "TPM2 enrollment failed for $crypt_disk. crypttab was not changed."
+    return 1
+  fi
+
+  update_crypttab_tpm "$uuid"
+}
+
 #Auto Enroll LUKS key into TPM
 enroll_luks_tpm() {
 
-  ## Inspect Kernel Cmdline for rd.luks.uuid
-  RD_LUKS_UUID="$(xargs -n1 -a /proc/cmdline | grep rd.luks.uuid | cut -d = -f 2)"
+  # The steps below rely on dracut or rpm-ostree. Debian's initramfs-tools
+  # does not support tpm2-device= in crypttab.
+  if [ ! -e /run/ostree-booted ] && ! command -v dracut >/dev/null 2>&1; then
+    printf "TPM enrollment here needs dracut or rpm-ostree. Neither was found.\n"
+    return 1
+  fi
 
-  # Check to make sure cmdline rd.luks.uuid exists
-  if [[ -z ${RD_LUKS_UUID:-} ]]; then
-    printf "LUKS device not defined on Kernel Commandline.\n"
+  if [ ! -c /dev/tpmrm0 ]; then
+    printf "No TPM2 device found (/dev/tpmrm0).\n"
+    return 1
+  fi
+
+  ## Find the LUKS volumes the kernel unlocks at boot
+  local uuids=() uuid enrolled=0 failed=0
+  mapfile -t uuids < <(luks_uuids_from_cmdline)
+
+  if [ "${#uuids[@]}" -eq 0 ]; then
+    printf "No rd.luks.uuid= found on the kernel command line.\n"
     printf "This is not supported by this script.\n"
-    printf "Exiting...\n"
     return 1
   fi
 
-  # Check to make sure that the specified cmdline uuid exists.
-  if ! grep -q "${RD_LUKS_UUID}" <<< "$(lsblk)" ; then
-    printf "LUKS device not listed in block devices.\n"
-    printf "Exiting...\n"
-    return 1
-  fi
-
-  # Cut off the luks-
-  LUKS_PREFIX="luks-"
-  if grep -q ^${LUKS_PREFIX} <<< "${RD_LUKS_UUID}"; then
-    DISK_UUID=${RD_LUKS_UUID#"$LUKS_PREFIX"}
-  else
-    echo -e "\e[31mLUKS UUID format mismatch."
-    echo -e "\e[31mExiting..."
-    return 1
-  fi
-
-  SET_PIN_ARG=""
-  # Always proceed without setting a PIN
-
-  # Specify Crypt Disk by-uuid
-  CRYPT_DISK="/dev/disk/by-uuid/$DISK_UUID"
-
-  # Check to make sure crypt disk exists
-  if [[ ! -L "$CRYPT_DISK" ]]; then
-    printf "LUKS device not listed in block devices.\n"
-    printf "Exiting...\n"
-    return 1
-  fi
-
-  if sudo cryptsetup luksDump "$CRYPT_DISK" | grep -q systemd-tpm2; then
-    KEYSLOT=$(sudo cryptsetup luksDump "$CRYPT_DISK" | sed -n '/systemd-tpm2$/,/Keyslot:/p' | grep Keyslot | awk '{print $2}')
-    echo "TPM2 already present in LUKS keyslot $KEYSLOT of $CRYPT_DISK. Automatically wiping it and re-enrolling."
-    sudo systemd-cryptenroll --wipe-slot=tpm2 "$CRYPT_DISK"
-  fi
-
-  ## Run crypt enroll
-  echo_green "Enrolling TPM2 unlock requires your existing LUKS2 unlock password"
-  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+14 "$CRYPT_DISK"
-
-  ## Add tpm2-device=auto to the options field (4th column) of the crypttab entry
-  LUKS_NAME="$RD_LUKS_UUID"
-  CRYPTTAB_FILE="/etc/crypttab"
-  if sudo grep -q "^${LUKS_NAME}[[:space:]]" "$CRYPTTAB_FILE"; then
-    if sudo grep -q "^${LUKS_NAME}[[:space:]].*tpm2-device=" "$CRYPTTAB_FILE"; then
-      log_message "tpm2-device already set in $CRYPTTAB_FILE for $LUKS_NAME"
-    else
-      sudo cp "$CRYPTTAB_FILE" "$CRYPTTAB_FILE.bak"
-      sudo awk -v name="$LUKS_NAME" '
-        $1 == name {
-          if (NF < 3) $3 = "none"
-          $4 = (NF >= 4) ? $4 ",tpm2-device=auto" : "tpm2-device=auto"
-        }
-        { print }' "$CRYPTTAB_FILE" | sudo tee "$CRYPTTAB_FILE.new" > /dev/null \
-        && sudo mv "$CRYPTTAB_FILE.new" "$CRYPTTAB_FILE"
-      log_message "Added tpm2-device=auto to $CRYPTTAB_FILE for $LUKS_NAME"
+  ## dracut's tpm2-tss module needs the tpm2 binary from tpm2-tools.
+  ## Without it the TPM libraries are left out of the initramfs.
+  if [ ! -e /run/ostree-booted ] && command -v dnf >/dev/null 2>&1; then
+    if ! sudo dnf install -y tpm2-tools tpm2-tss; then
+      log_message "Failed to install tpm2-tools and tpm2-tss"
+      return 1
     fi
-  else
-    log_message "Could not find $LUKS_NAME in $CRYPTTAB_FILE"
+  fi
+  if ! command -v tpm2 >/dev/null 2>&1; then
+    printf "tpm2-tools is not installed. Install it and rerun.\n"
+    return 1
+  fi
+
+  for uuid in "${uuids[@]}"; do
+    if enroll_luks_device "$uuid"; then
+      enrolled=$((enrolled + 1))
+    else
+      failed=$((failed + 1))
+    fi
+  done
+
+  if [ "$enrolled" -eq 0 ]; then
+    log_message "No LUKS volumes were enrolled."
+    return 1
   fi
 
   ## Make sure the initramfs includes tpm2-tss so it can unlock at boot
   if [ -e /run/ostree-booted ]; then
     sudo rpm-ostree initramfs --enable --arg=--force-add --arg=tpm2-tss
     log_message "Enabled rpm-ostree initramfs with tpm2-tss."
-  elif command -v dracut >/dev/null 2>&1; then
+  else
     # Persist the module so future kernel updates keep it
     echo 'add_dracutmodules+=" tpm2-tss "' | sudo tee /etc/dracut.conf.d/tpm2.conf > /dev/null
-    sudo dracut --force
+    # Every kernel: this script updates first, so the next boot may use a newer one
+    if ! sudo dracut --force --regenerate-all; then
+      log_message "dracut failed. The initramfs may not include the crypttab change."
+      return 1
+    fi
     log_message "Regenerated initramfs with dracut."
 
     if command -v update-grub >/dev/null 2>&1; then
@@ -607,6 +681,10 @@ enroll_luks_tpm() {
 
   ## Now reboot
   echo
+  if [ "$failed" -gt 0 ]; then
+    log_message "TPM2 enrollment failed for $failed LUKS volume(s). Those volumes will still ask for a password."
+    return 1
+  fi
   echo_green "TPM2 LUKS auto-unlock configured."
 }
 
