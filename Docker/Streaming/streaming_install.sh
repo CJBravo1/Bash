@@ -18,11 +18,17 @@
 #   ./streaming_install.sh                   full install (prompts before installing Docker if missing)
 #   ./streaming_install.sh --install-docker  only install Docker Engine + Compose plugin
 #   ./streaming_install.sh -y                answer yes to all prompts
+#   ./streaming_install.sh --volume-only     keep Radarr/Sonarr/Prowlarr/Transmission data, downloads,
+#                                            movies and TV in Docker named volumes (nothing under $HOME)
+#   ./streaming_install.sh --local-storage   switch back to bind mounts under $HOME (the default)
+#
+# The storage mode is remembered in $STACK_DIR/.env, so re-running without a flag keeps the current mode.
 #
 # Optional environment overrides:
 #   STACK_DIR   where docker-compose.yaml + .env are written (default: ~/Docker)
 #   TZ          timezone (default: system timezone, falls back to America/Chicago)
 #   PLEX_CLAIM  claim token from https://plex.tv/claim (valid 4 minutes) to link Plex to your account
+#   STORAGE_MODE  "local" (bind mounts under $HOME) or "volume" (Docker named volumes); same as the flags
 #
 set -euo pipefail
 
@@ -34,6 +40,7 @@ PGID="$(id -g)"
 TZ="${TZ:-$(timedatectl show -p Timezone --value 2>/dev/null || true)}"
 TZ="${TZ:-America/Chicago}"
 PLEX_CLAIM="${PLEX_CLAIM:-}"
+STORAGE_MODE="${STORAGE_MODE:-}"   # resolved in main(): flag > env > existing .env > "local"
 
 # Host paths (match the existing streaming_services / transmission stacks so existing config is reused)
 DATA="$HOME/Data"
@@ -52,7 +59,7 @@ RADARR_INTERNAL_URL="http://radarr:7878"
 SONARR_INTERNAL_URL="http://sonarr:8989"
 PROWLARR_INTERNAL_URL="http://prowlarr:9696"
 
-CONTAINERS=(radarr sonarr prowlarr plex jellyfin transmission transmission-cleanup)
+CONTAINERS=(radarr sonarr prowlarr plex jellyfin transmission transmission-cleanup volume-init)
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m  ✓\033[0m %s\n' "$*"; }
@@ -196,20 +203,65 @@ install_prereqs() {
 # --------------------------------------------------------------------------------------------
 create_dirs() {
     log "Creating host directories"
+    # Plex and Jellyfin config always lives on the host
     mkdir -p \
-        "$RADARR_CONFIG" "$SONARR_CONFIG" "$PROWLARR_CONFIG" \
         "$DATA/plex/config" "$DATA/plex/transcode" \
         "$DATA/jellyfin/config" "$DATA/jellyfin/cache" \
+        "$STACK_DIR"
+
+    if [[ "$STORAGE_MODE" == volume ]]; then
+        ok "Volume-only storage: Radarr/Sonarr/Prowlarr/Transmission data, downloads, movies and TV use Docker volumes"
+        return 0
+    fi
+
+    mkdir -p \
+        "$RADARR_CONFIG" "$SONARR_CONFIG" "$PROWLARR_CONFIG" \
         "$DATA/transmission-hooks" \
         "$DOWNLOADS/config" "$DOWNLOADS/complete" "$DOWNLOADS/incomplete" \
-        "$MEDIA/Movies" "$MEDIA/TV Shows" \
-        "$STACK_DIR"
+        "$MEDIA/Movies" "$MEDIA/TV Shows"
     ok "Directories ready under $DATA, $MEDIA, $DOWNLOADS"
 }
 
 # --------------------------------------------------------------------------------------------
 # 3. Combined compose file
 # --------------------------------------------------------------------------------------------
+
+# Fill the @PLACEHOLDER@ storage slots in the compose template for the chosen STORAGE_MODE.
+#   local:  bind mounts under $HOME (the original layout)
+#   volume: Docker named volumes (media_movies, media_tv, ...), nothing written under $HOME for
+#           Radarr/Sonarr/Prowlarr/Transmission. A one-shot volume-init container gives the media and
+#           download volumes to PUID:PGID before the apps start, since new volumes are owned by root.
+render_storage() {
+    local c="$1" key
+    local -A src
+    local init_dep="" init_svc="" vols=$'\n'
+
+    if [[ "$STORAGE_MODE" == volume ]]; then
+        src=(
+            [RADARR_CONFIG]=radarr-config  [SONARR_CONFIG]=sonarr-config  [PROWLARR_CONFIG]=prowlarr-config
+            [TRANSMISSION_CONFIG]=transmission-config  [TRANSMISSION_HOOKS]=transmission-hooks
+            [DOWNLOADS]=downloads  [MOVIES]=movies  [TV]=tv
+        )
+        init_dep=$'\n    depends_on:\n      volume-init:\n        condition: service_completed_successfully'
+        init_svc=$'\n  # Volume-only storage: new named volumes are owned by root, so hand them to PUID:PGID once\n  volume-init:\n    image: alpine:3.20\n    container_name: volume-init\n    command: ["chown", "${PUID}:${PGID}", "/movies", "/tv", "/downloads", "/hooks"]\n    volumes:\n      - "movies:/movies"\n      - "tv:/tv"\n      - "downloads:/downloads"\n      - "transmission-hooks:/hooks"\n    restart: "no"\n'
+        vols=$'\n# Volume-only storage. "docker compose down -v" DELETES these, including all movies and TV.\nvolumes:\n  radarr-config:\n  sonarr-config:\n  prowlarr-config:\n  transmission-config:\n  transmission-hooks:\n  downloads:\n  movies:\n  tv:\n'
+    else
+        src=(
+            [RADARR_CONFIG]='${HOME}/Data/radarr/config'  [SONARR_CONFIG]='${HOME}/Data/sonarr/data'
+            [PROWLARR_CONFIG]='${HOME}/Data/prowlarr'  [TRANSMISSION_CONFIG]='${HOME}/Transmission/config'
+            [TRANSMISSION_HOOKS]='${HOME}/Data/transmission-hooks'  [DOWNLOADS]='${HOME}/Transmission'
+            [MOVIES]='${HOME}/Movies/Movies'  [TV]='${HOME}/Movies/TV Shows'
+        )
+    fi
+
+    for key in "${!src[@]}"; do
+        c="${c//"@${key}@"/"${src[$key]}"}"
+    done
+    c="${c//"@INIT_DEP@"/"$init_dep"}"
+    c="${c//$'\n'"@VOLUME_INIT@"/"$init_svc"}"
+    c="${c//$'\n'"@VOLUMES@"/"$vols"}"
+    printf '%s' "$c"
+}
 write_compose() {
     log "Writing combined stack to $STACK_DIR"
 
@@ -218,6 +270,7 @@ PUID=$PUID
 PGID=$PGID
 TZ=$TZ
 PLEX_CLAIM=$PLEX_CLAIM
+STORAGE_MODE=$STORAGE_MODE
 EOF
 
     local compose="$STACK_DIR/docker-compose.yaml"
@@ -232,6 +285,7 @@ EOF
 name: media
 
 services:
+@VOLUME_INIT@
   radarr:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
@@ -240,11 +294,11 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - "${HOME}/Data/radarr/config:/config"
-      - "${HOME}/Movies/Movies:/movies"
-      - "${HOME}/Transmission:/downloads"
+      - "@RADARR_CONFIG@:/config"
+      - "@MOVIES@:/movies"
+      - "@DOWNLOADS@:/downloads"
     ports:
-      - "7878:7878"
+      - "7878:7878"@INIT_DEP@
     restart: unless-stopped
 
   sonarr:
@@ -255,11 +309,11 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - "${HOME}/Data/sonarr/data:/config"
-      - "${HOME}/Movies/TV Shows:/tv"
-      - "${HOME}/Transmission:/downloads"
+      - "@SONARR_CONFIG@:/config"
+      - "@TV@:/tv"
+      - "@DOWNLOADS@:/downloads"
     ports:
-      - "8989:8989"
+      - "8989:8989"@INIT_DEP@
     restart: unless-stopped
 
   prowlarr:
@@ -270,7 +324,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - "${HOME}/Data/prowlarr:/config"
+      - "@PROWLARR_CONFIG@:/config"
     ports:
       - "9696:9696"
     restart: unless-stopped
@@ -283,13 +337,13 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - "${HOME}/Transmission/config:/config"
-      - "${HOME}/Transmission:/downloads"
-      - "${HOME}/Data/transmission-hooks:/hooks"
+      - "@TRANSMISSION_CONFIG@:/config"
+      - "@DOWNLOADS@:/downloads"
+      - "@TRANSMISSION_HOOKS@:/hooks"
     ports:
       - "9091:9091"
       - "51413:51413"
-      - "51413:51413/udp"
+      - "51413:51413/udp"@INIT_DEP@
     restart: unless-stopped
 
   # Nightly cleanup: at 12:00 AM (TZ above), removes every 100%-complete torrent from Transmission
@@ -328,8 +382,8 @@ services:
     volumes:
       - "${HOME}/Data/plex/config:/config"
       - "${HOME}/Data/plex/transcode:/transcode"
-      - "${HOME}/Movies/Movies:/movies"
-      - "${HOME}/Movies/TV Shows:/tv"
+      - "@MOVIES@:/movies"
+      - "@TV@:/tv"@INIT_DEP@
     restart: unless-stopped
 
   jellyfin:
@@ -342,12 +396,12 @@ services:
     volumes:
       - "${HOME}/Data/jellyfin/config:/config"
       - "${HOME}/Data/jellyfin/cache:/cache"
-      - "${HOME}/Movies/Movies:/data/movies"
-      - "${HOME}/Movies/TV Shows:/data/tv"
+      - "@MOVIES@:/data/movies"
+      - "@TV@:/data/tv"
     ports:
-      - "8096:8096"
+      - "8096:8096"@INIT_DEP@
     restart: unless-stopped
-
+@VOLUMES@
 configs:
   # POSIX sh (busybox). "$$" is how a literal "$" is written inside a compose file.
   transmission-cleanup:
@@ -384,9 +438,10 @@ configs:
       log "Removed $$count completed download(s)."
 EOF
 
-    # Bake in absolute host paths: if docker ends up running via sudo, $HOME would be /root.
     local content
     content="$(<"$tmp")"
+    content="$(render_storage "$content")"
+    # Bake in absolute host paths: if docker ends up running via sudo, $HOME would be /root.
     printf '%s\n' "${content//'${HOME}'/$HOME}" >"$tmp"
 
     if [[ -f "$compose" ]] && ! cmp -s "$tmp" "$compose"; then
@@ -426,17 +481,21 @@ start_stack() {
 # 5. Integration helpers
 # --------------------------------------------------------------------------------------------
 
-# Wait for an *arr config.xml to contain an API key, then print it
+# Wait for an *arr config.xml to contain an API key, then print it.
+# Reads the host copy in local mode, or from inside the container in volume mode.
 get_api_key() {
-    local config="$1/config.xml" app="$2" key="" i
+    local config="$1/config.xml" app="$2" container="$3" key="" i
     for ((i = 0; i < 90; i++)); do
-        if [[ -r "$config" ]]; then
+        if [[ "$STORAGE_MODE" == volume ]]; then
+            key="$("${DOCKER[@]}" exec "$container" cat /config/config.xml 2>/dev/null \
+                | sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' || true)"
+        elif [[ -r "$config" ]]; then
             key="$(sed -n 's:.*<ApiKey>\(.*\)</ApiKey>.*:\1:p' "$config")"
-            [[ -n "$key" ]] && { echo "$key"; return 0; }
         fi
+        [[ -n "$key" ]] && { echo "$key"; return 0; }
         sleep 2
     done
-    die "Timed out waiting for $app API key in $config"
+    die "Timed out waiting for $app API key"
 }
 
 # Wait until an *arr API answers with a valid key
@@ -577,9 +636,9 @@ arr_add_rootfolder() {
 # --------------------------------------------------------------------------------------------
 configure_integrations() {
     log "Reading API keys"
-    RADARR_KEY="$(get_api_key "$RADARR_CONFIG" Radarr)"
-    SONARR_KEY="$(get_api_key "$SONARR_CONFIG" Sonarr)"
-    PROWLARR_KEY="$(get_api_key "$PROWLARR_CONFIG" Prowlarr)"
+    RADARR_KEY="$(get_api_key "$RADARR_CONFIG" Radarr radarr)"
+    SONARR_KEY="$(get_api_key "$SONARR_CONFIG" Sonarr sonarr)"
+    PROWLARR_KEY="$(get_api_key "$PROWLARR_CONFIG" Prowlarr prowlarr)"
     ok "API keys found for Radarr, Sonarr, Prowlarr"
 
     log "Waiting for services"
@@ -644,6 +703,36 @@ Next steps:
       Logs:      docker logs transmission-cleanup
       Disable:   docker compose -f "$STACK_DIR/docker-compose.yaml" stop transmission-cleanup
 EOF
+    if [[ "$STORAGE_MODE" == volume ]]; then
+        cat <<EOF
+
+Storage: VOLUME-ONLY. Radarr/Sonarr/Prowlarr/Transmission data, downloads, movies and TV live in
+Docker volumes (docker volume ls --filter name=media_), not under $HOME.
+Plex and Jellyfin config are still under $DATA.
+  WARNING: "docker compose down -v" or "docker volume prune" deletes the volumes, including every movie and show.
+EOF
+    fi
+}
+
+# Pick the storage mode: flag/env if given, otherwise whatever the last run used, otherwise local.
+# Switching modes does not move data, so warn and confirm.
+resolve_storage_mode() {
+    local previous=""
+    [[ -r "$STACK_DIR/.env" ]] && previous="$(sed -n 's/^STORAGE_MODE=//p' "$STACK_DIR/.env")"
+    STORAGE_MODE="${STORAGE_MODE:-${previous:-local}}"
+
+    case "$STORAGE_MODE" in
+        local|volume) ;;
+        *) die "STORAGE_MODE must be 'local' or 'volume' (got '$STORAGE_MODE')" ;;
+    esac
+
+    # Stacks from before this option existed have no STORAGE_MODE line and were local
+    if [[ -f "$STACK_DIR/docker-compose.yaml" && "${previous:-local}" != "$STORAGE_MODE" ]]; then
+        warn "Switching storage from '${previous:-local}' to '$STORAGE_MODE'. Existing data is NOT copied over:"
+        warn "Radarr/Sonarr/Prowlarr/Transmission start fresh, and movies/TV from the old location won't be visible."
+        confirm "Continue with $STORAGE_MODE storage?" || die "Aborted."
+    fi
+    log "Storage mode: $STORAGE_MODE"
 }
 
 usage() {
@@ -653,6 +742,9 @@ Usage: $(basename "$0") [options]
   (no options)      Install Docker if needed (asks first), then build and configure the media stack
   --install-docker  Only install Docker Engine + Compose plugin, then exit
   -y, --yes         Answer yes to all prompts (non-interactive)
+  --volume-only     Store Radarr/Sonarr/Prowlarr/Transmission data, downloads, movies and TV in Docker
+                    named volumes instead of under \$HOME (remembered for future runs)
+  --local-storage   Store everything under \$HOME with bind mounts (the default)
   -h, --help        Show this help
 EOF
 }
@@ -663,6 +755,8 @@ main() {
         case "$1" in
             --install-docker) docker_only=1 ;;
             -y|--yes)         ASSUME_YES=1 ;;
+            --volume-only)    STORAGE_MODE=volume ;;
+            --local-storage)  STORAGE_MODE=local ;;
             -h|--help)        usage; exit 0 ;;
             *)                usage >&2; die "Unknown option: $1" ;;
         esac
@@ -680,6 +774,7 @@ main() {
         exit 0
     fi
 
+    resolve_storage_mode
     install_prereqs
     create_dirs
     write_compose
