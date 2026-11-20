@@ -217,7 +217,8 @@ create_dirs() {
     mkdir -p \
         "$RADARR_CONFIG" "$SONARR_CONFIG" "$PROWLARR_CONFIG" \
         "$DATA/transmission-hooks" \
-        "$DOWNLOADS/config" "$DOWNLOADS/complete" "$DOWNLOADS/incomplete" \
+        "$DOWNLOADS/config" "$DOWNLOADS/incomplete" \
+        "$DOWNLOADS/complete/radarr" "$DOWNLOADS/complete/tv-sonarr" \
         "$MEDIA/Movies" "$MEDIA/TV Shows"
     ok "Directories ready under $DATA, $MEDIA, $DOWNLOADS"
 }
@@ -243,7 +244,9 @@ render_storage() {
             [DOWNLOADS]=downloads  [MOVIES]=movies  [TV]=tv
         )
         init_dep=$'\n    depends_on:\n      volume-init:\n        condition: service_completed_successfully'
-        init_svc=$'\n  # Volume-only storage: new named volumes are owned by root, so hand them to PUID:PGID once\n  volume-init:\n    image: alpine:3.20\n    container_name: volume-init\n    command: ["chown", "${PUID}:${PGID}", "/movies", "/tv", "/downloads", "/hooks"]\n    volumes:\n      - "movies:/movies"\n      - "tv:/tv"\n      - "downloads:/downloads"\n      - "transmission-hooks:/hooks"\n    restart: "no"\n'
+        # mkdir: Transmission saves to /downloads/complete/<category> (radarr, tv-sonarr: the Radarr/Sonarr
+        # defaults) and Radarr/Sonarr's health check fails if that folder is missing. In local mode create_dirs makes these on the host.
+        init_svc=$'\n  # Volume-only storage: new named volumes are empty and owned by root. Create the download\n  # folders Transmission uses and hand everything to PUID:PGID before the apps start.\n  volume-init:\n    image: alpine:3.20\n    container_name: volume-init\n    command:\n      - sh\n      - -c\n      - mkdir -p /downloads/complete/radarr /downloads/complete/tv-sonarr /downloads/incomplete && chown ${PUID}:${PGID} /movies /tv /downloads /downloads/complete /downloads/complete/radarr /downloads/complete/tv-sonarr /downloads/incomplete /hooks\n    volumes:\n      - "movies:/movies"\n      - "tv:/tv"\n      - "downloads:/downloads"\n      - "transmission-hooks:/hooks"\n    restart: "no"\n'
         vols=$'\n# Volume-only storage. "docker compose down -v" DELETES these, including all movies and TV.\nvolumes:\n  radarr-config:\n  sonarr-config:\n  prowlarr-config:\n  transmission-config:\n  transmission-hooks:\n  downloads:\n  movies:\n  tv:\n'
     else
         src=(
