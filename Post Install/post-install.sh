@@ -84,7 +84,9 @@ five_second_countdown() {
 }
 
 gnome_check() {
-    if [[ "$XDG_CURRENT_DESKTOP" == *"GNOME"* ]]; then
+    # Check the session env var, but fall back to looking for gnome-shell since
+    # XDG_CURRENT_DESKTOP is usually stripped when the script runs under sudo/SSH.
+    if [[ "$XDG_CURRENT_DESKTOP" == *"GNOME"* ]] || command -v gnome-shell >/dev/null 2>&1; then
         return 0
     else
         return 1
@@ -110,18 +112,36 @@ installClaudeCode() {
 }
 
 
+ensureFlathub() {
+    # Make sure flatpak is installed and the Flathub remote is added and enabled.
+    # Fedora Workstation only enables Flathub through GNOME's initial-setup
+    # "third-party repositories" toggle; KDE and other spins never do, and Fedora
+    # may ship the remote disabled/filtered, so fix it up explicitly everywhere.
+    if ! command -v flatpak >/dev/null 2>&1; then
+        echo_green "Installing Flatpak"
+        if [ -f /etc/debian_version ]; then
+            sudo apt install -y flatpak
+        elif command -v dnf >/dev/null 2>&1; then
+            sudo dnf install -y flatpak
+        fi
+    fi
+
+    log_message "Ensuring Flathub remote is enabled"
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    sudo flatpak remote-modify --enable --no-filter flathub
+}
+
 installFlatpacks() {
     log_message "Installing Flatpaks"
+    ensureFlathub
     flatpaks=(
         #app.drey.Damask
         #com.dropbox.Client
         com.github.tchx84.Flatseal
-        com.mattjakeman.ExtensionManager
         com.spotify.Client
         com.transmissionbt.Transmission
         #org.raspberrypi.rpi-imager
         io.github.davidoc26.wallpaper_selector
-        io.github.realmazharhussain.GdmSettings
         io.github.sigmasd.stimulator
         io.missioncenter.MissionCenter
         #org.gnome.Firmware
@@ -129,10 +149,18 @@ installFlatpacks() {
         org.remmina.Remmina
     )
 
+    # GNOME-only apps (useless on KDE and other desktops)
+    if gnome_check; then
+        flatpaks+=(
+            com.mattjakeman.ExtensionManager
+            io.github.realmazharhussain.GdmSettings
+        )
+    fi
+
     # Install all flatpaks at once
     echo_green "Installing ${flatpaks[@]}"  # Echo in green color
     # This command installs the Flatpaks specified in the 'flatpaks' array.
-    flatpak install -y ${flatpaks[@]}
+    flatpak install -y flathub "${flatpaks[@]}"
 }
 
 installGoogleChromeDeb() {
@@ -156,6 +184,7 @@ installGoogleChromeRpm() {
 
 installGoogleChromeFlatpak() {
     echo_green "Installing Google Chrome"  # Echo in green color
+    ensureFlathub
     flatpak install flathub com.google.Chrome -y
     flatpak override --user --filesystem=~/.local/share/applications --filesystem=~/.local/share/icons com.google.Chrome
 
@@ -411,16 +440,8 @@ installDebian() {
         # Desktop-only packages
         sudo apt install -y gnome-firmware
 
-        # Check if Flatpak is installed
-        if ! command -v flatpak >/dev/null 2>&1; then
-            # Install Flatpak
-            echo "Installing Flatpak"
-            sudo apt install flatpak -y
-            sudo apt update
-            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-        else
-            echo "Flatpak is already installed"
-        fi
+        # Flatpak + Flathub are set up by ensureFlathub (called from installFlatpacks)
+        ensureFlathub
     else
         echo "No window manager detected, skipping Flatpak installation"
     fi
