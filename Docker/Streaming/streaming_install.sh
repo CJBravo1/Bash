@@ -10,7 +10,7 @@
 #   - Prowlarr  -> The Pirate Bay    (public indexer, synced down to Radarr/Sonarr)
 #   - Radarr / Sonarr -> Transmission (download client)
 #   - Radarr / Sonarr root folders    (/movies, /tv)
-#   - systemd timer that deletes completed Transmission downloads every night at 12:00 AM
+#   - transmission-cleanup container that deletes completed Transmission downloads every night at 12:00 AM
 #
 # Safe to re-run: every integration step checks whether it already exists first.
 #
@@ -52,7 +52,7 @@ RADARR_INTERNAL_URL="http://radarr:7878"
 SONARR_INTERNAL_URL="http://sonarr:8989"
 PROWLARR_INTERNAL_URL="http://prowlarr:9696"
 
-CONTAINERS=(radarr sonarr prowlarr plex jellyfin transmission)
+CONTAINERS=(radarr sonarr prowlarr plex jellyfin transmission transmission-cleanup)
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m  ✓\033[0m %s\n' "$*"; }
@@ -292,6 +292,29 @@ services:
       - "51413:51413/udp"
     restart: unless-stopped
 
+  # Nightly cleanup: at 12:00 AM (TZ above), removes every 100%-complete torrent from Transmission
+  # AND deletes its files. Runs entirely in this container; nothing is installed on the host.
+  # The script itself is the "transmission-cleanup" config at the bottom of this file.
+  transmission-cleanup:
+    image: alpine:3.20
+    container_name: transmission-cleanup
+    depends_on:
+      - transmission
+    environment:
+      - TZ=${TZ}
+      - RPC_URL=http://transmission:9091/transmission/rpc
+    configs:
+      - source: transmission-cleanup
+        target: /cleanup.sh
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl jq tzdata >/dev/null
+        echo '0 0 * * * sh /cleanup.sh > /proc/1/fd/1 2>&1' > /etc/crontabs/root
+        exec crond -f -l 8
+    restart: unless-stopped
+
   plex:
     image: lscr.io/linuxserver/plex:latest
     container_name: plex
@@ -324,6 +347,41 @@ services:
     ports:
       - "8096:8096"
     restart: unless-stopped
+
+configs:
+  # POSIX sh (busybox). "$$" is how a literal "$" is written inside a compose file.
+  transmission-cleanup:
+    content: |
+      #!/bin/sh
+      # Removes every 100%-complete torrent from Transmission AND deletes its downloaded files.
+      # Incomplete downloads are left alone.
+      set -eu
+
+      log() { echo "$$(date '+%F %T') $$*"; }
+
+      # Transmission requires a session id, which it hands out on a 409 response
+      SESSION_ID="$$(curl -s -o /dev/null -D - "$$RPC_URL" | tr -d '\r' \
+          | awk 'tolower($$1) == "x-transmission-session-id:" { print $$2 }')"
+      [ -n "$$SESSION_ID" ] || { log "Transmission RPC not reachable at $$RPC_URL" >&2; exit 1; }
+
+      rpc() {
+          curl -fsS -H "X-Transmission-Session-Id: $$SESSION_ID" \
+              -H 'Content-Type: application/json' --data-binary "$$1" "$$RPC_URL"
+      }
+
+      completed="$$(rpc '{"method":"torrent-get","arguments":{"fields":["id","name","percentDone","sizeWhenDone"]}}' \
+          | jq -c '[.arguments.torrents[] | select(.percentDone == 1 and .sizeWhenDone > 0)]')"
+
+      count="$$(printf '%s' "$$completed" | jq length)"
+      if [ "$$count" -eq 0 ]; then
+          log "No completed downloads to remove."
+          exit 0
+      fi
+
+      printf '%s' "$$completed" | jq -r '.[].name' | while IFS= read -r name; do log "Removing: $$name"; done
+      rpc "$$(printf '%s' "$$completed" | jq -c '{method: "torrent-remove", arguments: {ids: [.[].id], "delete-local-data": true}}')" \
+          | jq -e '.result == "success"' >/dev/null
+      log "Removed $$count completed download(s)."
 EOF
 
     # Bake in absolute host paths: if docker ends up running via sudo, $HOME would be /root.
@@ -546,75 +604,21 @@ configure_integrations() {
 }
 
 # --------------------------------------------------------------------------------------------
-# 7. Nightly cleanup: remove completed Transmission downloads at 12:00 AM
+# 7. Remove the old host-side cleanup (systemd timer) if an earlier version of this script
+#    installed it. Cleanup now runs in the transmission-cleanup container instead.
 # --------------------------------------------------------------------------------------------
-install_cleanup_timer() {
-    log "Installing nightly Transmission cleanup (systemd timer, 12:00 AM)"
+remove_host_cleanup_timer() {
+    [[ -e /etc/systemd/system/transmission-cleanup.timer \
+        || -e /etc/systemd/system/transmission-cleanup.service \
+        || -e /usr/local/bin/transmission-cleanup ]] || return 0
 
-    local tmp
-    tmp="$(mktemp)"
-    cat >"$tmp" <<'EOF'
-#!/usr/bin/env bash
-# Installed by streaming_install.sh. Run by transmission-cleanup.timer every night at 12:00 AM.
-# Removes every 100%-complete torrent from Transmission AND deletes its downloaded files.
-# Incomplete downloads are left alone.
-set -euo pipefail
-
-RPC_URL="${RPC_URL:-http://localhost:9091/transmission/rpc}"
-
-# Transmission requires a session id, which it hands out on a 409 response
-SESSION_ID="$(curl -s -o /dev/null -D - "$RPC_URL" | tr -d '\r' \
-    | sed -n 's/^X-Transmission-Session-Id: *//Ip')"
-[[ -n "$SESSION_ID" ]] || { echo "Transmission RPC not reachable at $RPC_URL" >&2; exit 1; }
-
-rpc() {
-    curl -fsS -H "X-Transmission-Session-Id: $SESSION_ID" \
-        -H 'Content-Type: application/json' --data-binary "$1" "$RPC_URL"
-}
-
-completed="$(rpc '{"method":"torrent-get","arguments":{"fields":["id","name","percentDone","sizeWhenDone"]}}' \
-    | jq -c '[.arguments.torrents[] | select(.percentDone == 1 and .sizeWhenDone > 0)]')"
-
-count="$(jq length <<<"$completed")"
-if ((count == 0)); then
-    echo "No completed downloads to remove."
-    exit 0
-fi
-
-jq -r '.[].name | "Removing: " + .' <<<"$completed"
-rpc "$(jq -c '{method: "torrent-remove", arguments: {ids: [.[].id], "delete-local-data": true}}' <<<"$completed")" \
-    | jq -e '.result == "success"' >/dev/null
-echo "Removed $count completed download(s)."
-EOF
-    # Installed to /usr/local/bin (not $HOME) so SELinux allows systemd to execute it
-    sudo install -m 0755 "$tmp" /usr/local/bin/transmission-cleanup
-    rm -f "$tmp"
-
-    sudo tee /etc/systemd/system/transmission-cleanup.service >/dev/null <<EOF
-[Unit]
-Description=Remove completed Transmission downloads
-After=docker.service network-online.target
-
-[Service]
-Type=oneshot
-User=$USER
-ExecStart=/usr/local/bin/transmission-cleanup
-EOF
-
-    sudo tee /etc/systemd/system/transmission-cleanup.timer >/dev/null <<'EOF'
-[Unit]
-Description=Remove completed Transmission downloads every night at 12:00 AM
-
-[Timer]
-OnCalendar=*-*-* 00:00:00
-
-[Install]
-WantedBy=timers.target
-EOF
-
+    log "Removing old host transmission-cleanup timer (now handled by the transmission-cleanup container)"
+    sudo systemctl disable --now transmission-cleanup.timer 2>/dev/null || true
+    sudo rm -f /etc/systemd/system/transmission-cleanup.timer \
+        /etc/systemd/system/transmission-cleanup.service \
+        /usr/local/bin/transmission-cleanup
     sudo systemctl daemon-reload
-    sudo systemctl enable --now transmission-cleanup.timer
-    ok "transmission-cleanup.timer enabled (next run: $(systemctl show transmission-cleanup.timer -p NextElapseUSecRealtime --value))"
+    ok "Host timer removed"
 }
 
 summary() {
@@ -635,10 +639,10 @@ $(printf '\033[1;32m')Media stack is up.$(printf '\033[0m')  Compose file: $STAC
 Next steps:
   - Radarr/Sonarr/Prowlarr will ask you to set a login the first time you open them.
   - Manage the stack with:  docker compose -f "$STACK_DIR/docker-compose.yaml" [ps|logs|down|pull]
-  - Completed Transmission downloads are deleted nightly at 12:00 AM.
-      Run now:   sudo systemctl start transmission-cleanup.service
-      Logs:      journalctl -u transmission-cleanup.service
-      Disable:   sudo systemctl disable --now transmission-cleanup.timer
+  - Completed Transmission downloads are deleted nightly at 12:00 AM by the transmission-cleanup container.
+      Run now:   docker exec transmission-cleanup sh /cleanup.sh
+      Logs:      docker logs transmission-cleanup
+      Disable:   docker compose -f "$STACK_DIR/docker-compose.yaml" stop transmission-cleanup
 EOF
 }
 
@@ -681,7 +685,7 @@ main() {
     write_compose
     start_stack
     configure_integrations
-    install_cleanup_timer
+    remove_host_cleanup_timer
     summary
 }
 
