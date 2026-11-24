@@ -221,6 +221,36 @@ installMicrosoftFontsRpm() {
     fc-list | grep -qi "/msttcore/arial.ttf" || log_message "ERROR: Microsoft fonts did not install"
 }
 
+installMicrosoftFontsDeb() {
+    # Same fonts as installMicrosoftFontsRpm. In contrib on Debian and multiverse on
+    # Ubuntu and Mint.
+    log_message "Installing Microsoft fonts"
+    if fc-list 2>/dev/null | grep -qi "/msttcorefonts/arial.ttf"; then
+        echo "Microsoft fonts are already installed"
+        return 0
+    fi
+    local file
+    if ! apt-cache policy ttf-mscorefonts-installer | grep -q 'Candidate: [0-9]'; then
+        if grep -q '^ID=debian' /etc/os-release; then
+            for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+                [ -f "$file" ] && sudo sed -i '/^deb.*debian\.org/{/contrib/!s/\bmain\b/main contrib/}' "$file"
+            done
+            for file in /etc/apt/sources.list.d/*.sources; do
+                [ -f "$file" ] && grep -q 'debian\.org' "$file" \
+                    && sudo sed -i '/^Components:/{/contrib/!s/\bmain\b/main contrib/}' "$file"
+            done
+        elif command -v add-apt-repository >/dev/null 2>&1; then
+            sudo add-apt-repository -y multiverse
+        fi
+        sudo apt update
+    fi
+    # Accept the license up front, or the installer stops at a full-screen prompt
+    echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections
+    sudo apt install -y fontconfig ttf-mscorefonts-installer
+    sudo fc-cache -f
+    fc-list | grep -qi "/msttcorefonts/arial.ttf" || log_message "ERROR: Microsoft fonts did not install"
+}
+
 installGoogleChromeFlatpak() {
     echo_green "Installing Google Chrome"  # Echo in green color
     ensureFlathub
@@ -517,6 +547,7 @@ installDebian() {
     if check_WINDOW_MANAGER; then
         # Desktop-only packages
         sudo apt install -y gnome-firmware
+        installMicrosoftFontsDeb
 
         # Flatpak + Flathub are set up by ensureFlathub (called from installFlatpacks)
         ensureFlathub
