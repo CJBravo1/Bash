@@ -178,8 +178,47 @@ installGoogleChromeDeb() {
 }
 
 installGoogleChromeRpm() {
+    log_message "Installing Google Chrome"
     echo_green "Installing Google Chrome"  # Echo in green color
+    # Chrome is not in the Fedora repos. fedora-workstation-repositories ships this
+    # repo file disabled, so write it out enabled.
+    sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub
+    sudo tee /etc/yum.repos.d/google-chrome.repo > /dev/null <<'EOF'
+[google-chrome]
+name=google-chrome
+baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64/
+enabled=1
+gpgcheck=1
+gpgkey=https://dl.google.com/linux/linux_signing_key.pub
+EOF
     sudo dnf install google-chrome-stable -y
+    rpm -q google-chrome-stable >/dev/null 2>&1 || log_message "ERROR: Google Chrome did not install"
+}
+
+installMicrosoftFontsRpm() {
+    # Arial, Times New Roman, Verdana and friends. Not in Fedora or RPM Fusion.
+    # (mscore-* in Fedora is MuseScore, not Microsoft core fonts.)
+    log_message "Installing Microsoft fonts"
+    if fc-list 2>/dev/null | grep -qi "/msttcore/arial.ttf"; then
+        echo "Microsoft fonts are already installed"
+        return 0
+    fi
+    local url="https://downloads.sourceforge.net/project/mscorefonts2/rpms/msttcore-fonts-installer-2.6-1.noarch.rpm"
+    local sha256="55d7f3a86533225634ff3ea2384b4356d9665a29cc7eeacff16602a1714afbb4"
+    local tmp_dir
+    tmp_dir=$(mktemp -d) || return 1
+    sudo dnf install -y cabextract xorg-x11-font-utils fontconfig curl
+    # The package predates RPM digests, which RPM 6 (Fedora 43+) requires, so dnf
+    # refuses it. Check it against a fixed SHA-256 here, then skip RPM's own check.
+    if curl -fsSL -o "$tmp_dir/msttcore.rpm" "$url" \
+        && echo "$sha256  $tmp_dir/msttcore.rpm" | sha256sum -c --quiet -; then
+        sudo rpm -U --replacepkgs --nodigest --nosignature "$tmp_dir/msttcore.rpm"
+    else
+        log_message "ERROR: Microsoft fonts download failed or did not match its SHA-256"
+    fi
+    rm -rf "$tmp_dir"
+    sudo fc-cache -f
+    fc-list | grep -qi "/msttcore/arial.ttf" || log_message "ERROR: Microsoft fonts did not install"
 }
 
 installGoogleChromeFlatpak() {
@@ -358,6 +397,35 @@ addGreetings() {
     cp -v ~/Scripts/bash/Post\ Install/updatescript.sh ~/
 }
 
+# Enable an extension. gnome-extensions can't see one installed in this session
+# until the next login, so fall back to adding it to the enabled list directly.
+enable_gnome_extension() {
+    local uuid="$1" current
+    gnome-extensions enable "$uuid" 2>/dev/null && return 0
+    current=$(gsettings get org.gnome.shell enabled-extensions)
+    case "$current" in
+        *"'$uuid'"*) ;;
+        "@as []"|"[]") gsettings set org.gnome.shell enabled-extensions "['$uuid']" ;;
+        *) gsettings set org.gnome.shell enabled-extensions "${current%]}, '$uuid']" ;;
+    esac
+}
+
+# Ulauncher is in Fedora's repos but not in Debian's or Ubuntu's, so use the .deb
+# from its latest stable GitHub release there.
+installUlauncherDeb() {
+    local url tmp_dir
+    url=$(curl -fsSL https://api.github.com/repos/Ulauncher/Ulauncher/releases/latest \
+        | grep -oE 'https://[^"]+_all\.deb' | head -n1)
+    tmp_dir=$(mktemp -d) || return 1
+    chmod 755 "$tmp_dir"   # apt's sandbox user has to read the file
+    if [ -n "$url" ] && curl -fsSL -o "$tmp_dir/ulauncher.deb" "$url"; then
+        sudo apt install -y "$tmp_dir/ulauncher.deb"
+    else
+        log_message "ERROR: could not download Ulauncher"
+    fi
+    rm -rf "$tmp_dir"
+}
+
 customize_gnome() {
     # Customize GNOME settings
     log_message "Customizing GNOME settings"
@@ -366,17 +434,22 @@ customize_gnome() {
     # Sort files by Type in the default folder view
     gsettings set org.gnome.nautilus.preferences default-sort-order type
 
-    # Install Extensions for GNOME if RedHat-based
+    # Dash to Dock: package names differ, and Ubuntu's own dock is a fork of it
+    local dock_installed=true
     if command -v dnf >/dev/null 2>&1; then
-        sudo dnf install -y\
-        gnome-tweaks\
-        gnome-shell-extension-dash-to-dock
+        sudo dnf install -y --skip-unavailable gnome-tweaks gnome-shell-extension-dash-to-dock
     elif command -v apt >/dev/null 2>&1; then
-        sudo apt install -y\
-         gnome-tweaks\
-         gnome-shell-extension-dash-to-dock
+        sudo apt install -y gnome-tweaks
+        if [ -d /usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com ]; then
+            log_message "Ubuntu Dock is present, skipping Dash to Dock"
+            dock_installed=false
+        else
+            sudo apt install -y gnome-shell-extension-dashtodock
+        fi
     fi
-    gnome-extensions enable dash-to-dock@micxgx.gmail.com
+    if $dock_installed; then
+        enable_gnome_extension dash-to-dock@micxgx.gmail.com
+    fi
 
     #Install Ulauncher
     if ! command -v ulauncher >/dev/null 2>&1; then
@@ -384,10 +457,15 @@ customize_gnome() {
         if command -v dnf >/dev/null 2>&1; then
             sudo dnf install -y ulauncher
         elif command -v apt >/dev/null 2>&1; then
-            sudo apt install -y ulauncher
+            installUlauncherDeb
         fi
     else
         echo "Ulauncher is already installed"
+    fi
+
+    if ! command -v ulauncher >/dev/null 2>&1; then
+        log_message "ERROR: Ulauncher did not install, skipping its keyboard shortcut"
+        return 1
     fi
 
     # Set keyboard shortcut Super+Space to launch Ulauncher
@@ -511,10 +589,11 @@ installFedora() {
 
     # Desktop-only packages
     if $WINDOW_MANAGER; then
-        sudo dnf install -y \
+        # --skip-unavailable: one missing package must not block the others
+        sudo dnf install -y --skip-unavailable \
             gnome-firmware \
-            gparted \
-            mscore-fonts-all
+            gparted
+        installMicrosoftFontsRpm
     fi
 
 
@@ -725,7 +804,7 @@ installSilverblue() {
 
     # Install Standard Packages
     echo "Running: Standard Package Installs"
-    rpm-ostree install toilet borgbackup fortune-mod lolcat vim nano htop btop gh pv fastfetch gnome-firmware rclone mscore-fonts-all
+    rpm-ostree install toilet borgbackup fortune-mod lolcat vim nano htop btop gh pv fastfetch gnome-firmware rclone
 
     # Remove unwanted packages
     echo "Removing unwanted packages"
